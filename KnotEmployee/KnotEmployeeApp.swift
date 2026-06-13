@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct KnotEmployeeApp: App {
+    @State private var store = AppStore.sample
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(\.knotTheme, BakeryCoTheme())
+                .environment(store)
         }
     }
 }
