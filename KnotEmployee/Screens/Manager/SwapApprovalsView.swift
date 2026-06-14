@@ -47,6 +47,7 @@ struct ApprovalsView: View {
                         .background(Capsule().strokeBorder(theme.line, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Deny pickup from \(shift.offeredBy)")
                 Button { approve(shift) } label: {
                     HStack(spacing: 6) {
                         IconView(icon: .check, size: 16, color: theme.paper)
@@ -56,6 +57,7 @@ struct ApprovalsView: View {
                     .background(theme.ink, in: Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Approve pickup from \(shift.offeredBy)")
             }
         }
         .knotCard(padding: 13)
@@ -75,6 +77,7 @@ struct ApprovalsView: View {
             IconView(icon: .check, size: 28, color: theme.green)
                 .frame(width: 64, height: 64)
                 .background(theme.green.opacity(0.12), in: Circle())
+                .accessibilityHidden(true)
             Text("All caught up").font(theme.display(21)).foregroundStyle(theme.ink)
             Text("No pickups or swaps are waiting on you.")
                 .font(theme.body(13)).foregroundStyle(theme.inkMuted)

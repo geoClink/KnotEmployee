@@ -3,6 +3,8 @@ import SwiftUI
 struct HomeView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
+    @State private var showNewSwap = false
+    @State private var showNewTimeOff = false
 
     private let order = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
     private let today = "Thu"
@@ -34,11 +36,14 @@ struct HomeView: View {
                 .padding(20)
             }
             .background(theme.cream.ignoresSafeArea())
+            .sheet(isPresented: $showNewSwap) { NewSwapView() }
+            .sheet(isPresented: $showNewTimeOff) { NewTimeOffView() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink { OpenShiftsView() } label: {
                         IconView(icon: .handoff, size: 22, color: theme.rose)
                     }
+                    .accessibilityLabel("Open shifts")
                 }
             }
         }
@@ -53,7 +58,10 @@ struct HomeView: View {
 
     private func shiftLink(_ shift: Shift) -> some View {
         NavigationLink {
-            ShiftDetailView(shift: shift, onGiveUp: { giveUp(shift) })
+            ShiftDetailView(shift: shift,
+                            onSwap: { showNewSwap = true },
+                            onGiveUp: { giveUp(shift) },
+                            onTimeOff: { showNewTimeOff = true })
         } label: {
             ShiftCard(shift: shift)
         }
@@ -63,6 +71,7 @@ struct HomeView: View {
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title).font(theme.display(18)).foregroundStyle(theme.ink)
+                .accessibilityAddTraits(.isHeader)
             content()
         }
     }
@@ -71,8 +80,12 @@ struct HomeView: View {
         store.currentUser.name.split(separator: " ").first.map(String.init) ?? ""
     }
     private func giveUp(_ shift: Shift) {
+        // Mark the shift as offered so it shows visually
+        if let i = store.shift.firstIndex(where: { $0.id == shift.id }) {
+            store.shift[i].status = .offered
+        }
         store.openShifts.append(
-            OpenShift(offeredBy: "You", day: shift.day, date: shift.date,
+            OpenShift(offeredBy: store.currentUser.name, day: shift.day, date: shift.date,
                       start: shift.start, end: shift.end, role: shift.role, status: .offered)
         )
     }

@@ -83,6 +83,7 @@ struct ShiftDetailView: View {
             .overlay(Capsule().strokeBorder(theme.line, lineWidth: 1))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
     }
 
     private var dayFull: String {

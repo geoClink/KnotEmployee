@@ -76,22 +76,26 @@ struct ManagerHomeView: View {
         }
     }
 
-    private var pendingCount: Int { store.openShifts.filter { $0.status == .pending }.count }
+    private var pendingPickups: Int { store.openShifts.filter { $0.status == .pending }.count }
+    private var pendingTimeOff: Int { store.timeOff.filter { $0.status == .pending }.count }
 
-       private var quickActions: some View {
-           let cols = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
-           return LazyVGrid(columns: cols, spacing: 10) {
-               actionCard(.calendar, "Schedule")
-               NavigationLink {
-                   ApprovalsView()
-               } label: {
-                   actionCard(.swap, "Approvals", badge: pendingCount)
-               }
-               .buttonStyle(.plain)
-               actionCard(.users, "Directory")
-               actionCard(.chart, "Labor report")
-           }
-       }
+    private var quickActions: some View {
+        let cols = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+        return LazyVGrid(columns: cols, spacing: 10) {
+            NavigationLink { ApprovalsView() } label: {
+                actionCard(.swap, "Approvals", badge: pendingPickups)
+            }.buttonStyle(.plain)
+            NavigationLink { TimeOffApprovalsView() } label: {
+                actionCard(.calendar, "Time off", badge: pendingTimeOff)
+            }.buttonStyle(.plain)
+            NavigationLink { LaborReportView() } label: {
+                actionCard(.chart, "Labor report")
+            }.buttonStyle(.plain)
+            NavigationLink { StaffDirectoryView() } label: {
+                actionCard(.users, "Directory")
+            }.buttonStyle(.plain)
+        }
+    }
 
        private func actionCard(_ icon: KnotIcon, _ label: String, badge: Int = 0) -> some View {
            VStack(alignment: .leading, spacing: 10) {
@@ -125,6 +129,7 @@ struct ManagerHomeView: View {
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title).font(theme.display(18)).foregroundStyle(theme.ink)
+                .accessibilityAddTraits(.isHeader)
             content()
         }
     }

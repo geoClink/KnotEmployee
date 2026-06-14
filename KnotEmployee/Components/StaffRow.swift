@@ -19,6 +19,7 @@ struct StaffRow: View {
             }
         }
         .padding(.vertical, 11).padding(.horizontal, 4)
+        .accessibilityElement(children: .combine)
     }
 
     private var badge: BadgeStatus {

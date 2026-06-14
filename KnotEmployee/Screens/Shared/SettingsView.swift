@@ -82,6 +82,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title.uppercased()).font(theme.mono(11)).foregroundStyle(theme.inkFaint)
                 .padding(.leading, 4)
+                .accessibilityAddTraits(.isHeader)
             VStack(spacing: 0) { content() }
                 .background(theme.card, in: RoundedRectangle(cornerRadius: theme.rCard))
                 .overlay(RoundedRectangle(cornerRadius: theme.rCard).strokeBorder(theme.line, lineWidth: 1))
@@ -122,6 +123,7 @@ struct SettingsView: View {
             Text(value).font(theme.body(13)).foregroundStyle(theme.inkMuted)
         }
         .padding(.horizontal, 14).padding(.vertical, 11)
+        .accessibilityElement(children: .combine)
     }
 
     private var divider: some View {

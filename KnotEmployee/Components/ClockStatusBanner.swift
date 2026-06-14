@@ -10,10 +10,12 @@ struct ClockStatusBanner: View {
                 IconView(icon: .clock, size: 24, color: dotColor)
                     .frame(width: 44, height: 44)
                     .background(theme.paper.opacity(0.08), in: Circle())
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 7) {
                         Circle().fill(dotColor).frame(width: 7, height: 7)
+                            .accessibilityHidden(true)
                         Text(title).font(theme.bodyMedium(15)).foregroundStyle(theme.paper)
                     }
                     TimelineView(.periodic(from: .now, by: 60)) { ctx in

@@ -29,7 +29,35 @@ extension AppStore {
                           start: "8:00 AM", end: "4:00 PM", role: "Cashier", reason: "Exam", status: .pending)
             ],
             swaps: [Swap(direction: .outgoing, status: .pending, withName: "Aisha Bello")],
-            timeOff: [TimeOff(kind: .pto, status: .approved, range: "Jun 24 – Jun 26", days: 3, note: "Family trip")]
+            timeOff: [
+                TimeOff(staffName: "Maya Okafor", kind: .pto, status: .approved, range: "Jun 24 – Jun 26", days: 3, note: "Family trip"),
+                TimeOff(staffName: "Devon Hale", kind: .sick, status: .pending, range: "Jun 20 – Jun 21", days: 2, note: "Doctor appointment"),
+                TimeOff(staffName: "Priya Raman", kind: .personal, status: .pending, range: "Jun 28", days: 1)
+            ],
+            threads: [
+                MessageThread(participantName: "Elena Voss", lastMessage: "Sounds good, see you then!", timestamp: "2:15 PM", unread: true, messages: [
+                    Message(senderName: "Maya Okafor", text: "Hey Elena, could I leave 30 min early on Friday?", timestamp: "1:50 PM", isFromCurrentUser: true),
+                    Message(senderName: "Elena Voss", text: "That should be fine — Priya can cover close.", timestamp: "2:10 PM", isFromCurrentUser: false),
+                    Message(senderName: "Maya Okafor", text: "Perfect, thank you!", timestamp: "2:12 PM", isFromCurrentUser: true),
+                    Message(senderName: "Elena Voss", text: "Sounds good, see you then!", timestamp: "2:15 PM", isFromCurrentUser: false)
+                ]),
+                MessageThread(participantName: "Aisha Bello", lastMessage: "Can you cover my Saturday close?", timestamp: "Yesterday", unread: false, messages: [
+                    Message(senderName: "Aisha Bello", text: "Hey Maya! Can you cover my Saturday close?", timestamp: "Yesterday", isFromCurrentUser: false),
+                    Message(senderName: "Maya Okafor", text: "I'll check my schedule and let you know", timestamp: "Yesterday", isFromCurrentUser: true)
+                ]),
+                MessageThread(participantName: "Devon Hale", lastMessage: "Thanks for the sourdough tips!", timestamp: "Mon", unread: false, messages: [
+                    Message(senderName: "Devon Hale", text: "Hey, any tips for the sourdough starter?", timestamp: "Mon", isFromCurrentUser: false),
+                    Message(senderName: "Maya Okafor", text: "Feed it every 12 hours and keep it at room temp!", timestamp: "Mon", isFromCurrentUser: true),
+                    Message(senderName: "Devon Hale", text: "Thanks for the sourdough tips!", timestamp: "Mon", isFromCurrentUser: false)
+                ])
+            ],
+            notifications: [
+                AppNotification(icon: "calendar", title: "Shift tomorrow", body: "6:00 AM – 12:00 PM · Lead Baker", timestamp: "Just now", isRead: false, category: .shift),
+                AppNotification(icon: "arrow.left.arrow.right", title: "Swap approved", body: "Your swap with Aisha Bello was approved.", timestamp: "2h ago", isRead: false, category: .swap),
+                AppNotification(icon: "checkmark", title: "Time off approved", body: "Jun 24–26 PTO request approved.", timestamp: "Yesterday", isRead: true, category: .timeOff),
+                AppNotification(icon: "bubble.left", title: "New message", body: "Elena Voss sent you a message.", timestamp: "Yesterday", isRead: true, category: .message),
+                AppNotification(icon: "megaphone", title: "Schedule published", body: "Week of Jun 9–15 has been published.", timestamp: "2 days ago", isRead: true, category: .system)
+            ]
         )
     }
 }

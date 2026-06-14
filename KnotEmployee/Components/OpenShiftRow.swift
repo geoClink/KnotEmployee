@@ -67,6 +67,7 @@ struct OpenShiftRow: View {
             }
         }
         .knotCard(padding: 12)
+        .accessibilityElement(children: .combine)
     }
 
     private func pill(_ text: String, _ color: Color) -> some View {

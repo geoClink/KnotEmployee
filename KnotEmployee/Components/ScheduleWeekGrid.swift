@@ -10,13 +10,19 @@ struct WeekDay: Identifiable {
 struct ScheduleWeekGrid: View {
     @Environment(\.knotTheme) private var theme
     let days: [WeekDay]
+    var onSwap: () -> Void = {}
+    var onTimeOff: () -> Void = {}
+    var onGiveUp: (Shift) -> Void = { _ in }
 
     var body: some View {
         VStack(spacing: 8) {
             ForEach(days) { day in
                 if let shift = day.shift {
                     NavigationLink {
-                        ShiftDetailView(shift: shift)
+                        ShiftDetailView(shift: shift,
+                                        onSwap: onSwap,
+                                        onGiveUp: { onGiveUp(shift) },
+                                        onTimeOff: onTimeOff)
                     } label: {
                         row(day, shift)
                     }

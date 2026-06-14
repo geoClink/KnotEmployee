@@ -18,9 +18,10 @@ struct StaffTabView: View {
         TabView {
             HomeView().tabItem { Label("Home", systemImage: "house") }
             ScheduleView().tabItem { Label("Schedule", systemImage: "calendar") }
-            NavigationStack { OpenShiftsView() }
-                .tabItem { Label("Swaps", systemImage: "arrow.left.arrow.right") }
-            SettingsView().tabItem { Label("More", systemImage: "ellipsis") }
+            MessagesView().tabItem { Label("Messages", systemImage: "bubble.left") }
+            NavigationStack { NotificationsView() }
+                .tabItem { Label("Alerts", systemImage: "bell") }
+            StaffMoreView().tabItem { Label("More", systemImage: "ellipsis") }
         }
         .tint(theme.rose)
     }
@@ -35,9 +36,50 @@ struct ManagerTabView: View {
                 .tabItem { Label("Schedule", systemImage: "calendar") }
             StaffDirectoryView()
                 .tabItem { Label("Team", systemImage: "person.2") }
+            ManagerMessagesView()
+                .tabItem { Label("Messages", systemImage: "bubble.left") }
             SettingsView().tabItem { Label("More", systemImage: "ellipsis") }
         }
         .tint(theme.rose)
+    }
+}
+
+struct StaffMoreView: View {
+    @Environment(\.knotTheme) private var theme
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 8) {
+                    moreLink(icon: .handoff, title: "Open shifts") { OpenShiftsView() }
+                    moreLink(icon: .swap, title: "Swap requests") { SwapRequestsView() }
+                    moreLink(icon: .calendar, title: "Time off") { TimeOffView() }
+                    moreLink(icon: .dollar, title: "Earnings") { EarningsView() }
+                    moreLink(icon: .gear, title: "Settings") { SettingsView() }
+                }
+                .padding(20)
+            }
+            .background(theme.cream.ignoresSafeArea())
+            .navigationTitle("More")
+        }
+    }
+
+    private func moreLink<D: View>(icon: KnotIcon, title: String, @ViewBuilder destination: () -> D) -> some View {
+        NavigationLink {
+            destination()
+        } label: {
+            HStack(spacing: 12) {
+                IconView(icon: icon, size: 20, color: theme.inkSoft)
+                    .frame(width: 40, height: 40)
+                    .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: theme.rCard))
+                Text(title).font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
+                Spacer()
+                IconView(icon: .chevronRight, size: 16, color: theme.inkFaint)
+            }
+            .knotCard(padding: 12)
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
     }
 }
 

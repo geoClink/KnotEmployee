@@ -5,6 +5,8 @@ struct ScheduleBuilderView: View {
     @Environment(AppStore.self) private var store
 
     @State private var published = false
+    @State private var editRow: Int?
+    @State private var editDay: Int?
     private let days = [("Mon","9"),("Tue","10"),("Wed","11"),("Thu","12"),("Fri","13"),("Sat","14"),("Sun","15")]
 
     var body: some View {
@@ -19,6 +21,14 @@ struct ScheduleBuilderView: View {
             }
             .background(theme.cream.ignoresSafeArea())
             .navigationTitle("Schedule")
+            .sheet(isPresented: Binding(
+                get: { editRow != nil && editDay != nil },
+                set: { if !$0 { editRow = nil; editDay = nil } }
+            )) {
+                if let r = editRow, let d = editDay {
+                    AddEditShiftView(rowIndex: r, dayIndex: d)
+                }
+            }
         }
     }
 
@@ -52,11 +62,15 @@ struct ScheduleBuilderView: View {
             }
             .padding(.vertical, 6)
 
-            ForEach(store.weekGrid) { row in
+            ForEach(Array(store.weekGrid.enumerated()), id: \.element.id) { rowIdx, row in
                 HStack(spacing: 4) {
                     Avatar(name: row.name, size: 28).frame(width: 40)
-                    ForEach(Array(row.cells.enumerated()), id: \.offset) { _, cell in
-                        cellView(cell)
+                    ForEach(Array(row.cells.enumerated()), id: \.offset) { dayIdx, cell in
+                        Button { editRow = rowIdx; editDay = dayIdx } label: {
+                            cellView(cell)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(row.name), \(days[dayIdx].0), \(cell ?? "off")")
                     }
                 }
                 .padding(.vertical, 5)

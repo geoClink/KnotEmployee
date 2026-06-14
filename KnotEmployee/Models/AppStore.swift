@@ -32,6 +32,8 @@ struct ManagerAlert: Identifiable {
     var openShifts: [OpenShift]
     var swaps: [Swap]
     var timeOff: [TimeOff]
+    var threads: [MessageThread]
+    var notifications: [AppNotification]
     
     var isManager: Bool { currentUser.role == .manager }
     
@@ -80,12 +82,14 @@ struct ManagerAlert: Identifiable {
         isAuthenticated = false
     }
 
-    init(currentUser: StaffMember, staff: [StaffMember], shift: [Shift], openShifts: [OpenShift], swaps: [Swap], timeOff: [TimeOff]) {
+    init(currentUser: StaffMember, staff: [StaffMember], shift: [Shift], openShifts: [OpenShift], swaps: [Swap], timeOff: [TimeOff], threads: [MessageThread] = [], notifications: [AppNotification] = []) {
         self.currentUser = currentUser
         self.staff = staff
         self.shift = shift
         self.openShifts = openShifts
         self.swaps = swaps
         self.timeOff = timeOff
+        self.threads = threads
+        self.notifications = notifications
     }
 }

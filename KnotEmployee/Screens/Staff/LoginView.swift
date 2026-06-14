@@ -26,6 +26,8 @@ struct LoginView: View {
                         .frame(width: 14, height: 14)
                 }
             }
+            .accessibilityElement()
+            .accessibilityLabel("\(pin.count) of 4 digits entered")
             Text(error ? "Incorrect PIN. Try again." : "Enter your 4-digit PIN")
                 .font(theme.body(13)).foregroundStyle(error ? theme.roseDeep : theme.inkMuted)
                 .padding(.top, 14)
@@ -49,12 +51,14 @@ struct LoginView: View {
     @ViewBuilder private func keyButton(_ key: String) -> some View {
         if key.isEmpty {
             Color.clear.frame(width: 64, height: 64)
+                .accessibilityHidden(true)
         } else if key == "del" {
             Button { delete() } label: {
                 IconView(icon: .chevronLeft, size: 22, color: theme.inkMuted)
                     .frame(width: 64, height: 64)
             }
             .buttonStyle(.plain).frame(maxWidth: .infinity)
+            .accessibilityLabel("Delete")
         } else {
             Button { tap(key) } label: {
                 Text(key).font(theme.display(26)).foregroundStyle(theme.ink)

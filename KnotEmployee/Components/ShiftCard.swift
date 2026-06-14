@@ -24,6 +24,7 @@ struct ShiftCard: View {
         .padding(Layout.s3)
         .background(theme.card, in: .rect(cornerRadius: theme.rCard))
         .overlay(RoundedRectangle(cornerRadius: theme.rCard).strokeBorder(theme.line, lineWidth: 1))
+        .accessibilityElement(children: .combine)
     }
 
     private var dateBlock: some View {
