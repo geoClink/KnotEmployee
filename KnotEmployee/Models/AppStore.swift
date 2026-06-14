@@ -12,6 +12,12 @@ struct LaborSummary {
     var scheduledCount: Int
 }
 
+struct ScheduleRow: Identifiable {
+    let id = UUID()
+    var name: String
+    var cells: [String?]   // 7 entries (Mon–Sun); nil = off
+}
+
 struct ManagerAlert: Identifiable {
     enum Severity { case high, med, low }
     let id = UUID()
@@ -40,6 +46,15 @@ struct ManagerAlert: Identifiable {
         ManagerAlert(severity: .high, text: "2 shifts unfilled Saturday"),
         ManagerAlert(severity: .med,  text: "Theo Brandt approaching overtime (38.5h)"),
         ManagerAlert(severity: .low,  text: "3 swap requests awaiting approval")
+    ]
+    
+    var weekGrid: [ScheduleRow] = [
+        ScheduleRow(name: "Maya Okafor",  cells: ["6–2", nil, "6–2", "7–3", "6–12", nil, "7–1"]),
+        ScheduleRow(name: "Devon Hale",   cells: ["7–3", "7–3", nil, nil, "12–8", "12–8", nil]),
+        ScheduleRow(name: "Priya Raman",  cells: [nil, "8–4", "8–4", "8–4", nil, "9–5", "9–5"]),
+        ScheduleRow(name: "Theo Brandt",  cells: ["5–1", "5–1", "5–1", "5–1", "5–1", nil, nil]),
+        ScheduleRow(name: "Aisha Bello",  cells: [nil, "2–9", "2–9", nil, nil, "2–9", "2–9"]),
+        ScheduleRow(name: "Jonah Klein",  cells: ["3–9", nil, "3–9", "3–9", "3–9", "4–10", nil])
     ]
     
     var isAuthenticated = false

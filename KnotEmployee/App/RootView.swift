@@ -31,7 +31,8 @@ struct ManagerTabView: View {
     var body: some View {
         TabView {
             ManagerHomeView().tabItem { Label("Home", systemImage: "house") }
-            PlaceholderView(title: "Schedule").tabItem { Label("Schedule", systemImage: "calendar") }
+            ScheduleBuilderView()
+                .tabItem { Label("Schedule", systemImage: "calendar") }
             StaffDirectoryView()
                 .tabItem { Label("Team", systemImage: "person.2") }
             SettingsView().tabItem { Label("More", systemImage: "ellipsis") }
