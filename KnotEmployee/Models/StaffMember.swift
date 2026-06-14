@@ -8,4 +8,5 @@ struct StaffMember: Identifiable, Hashable {
     var role: Role = .staff
     var hoursThisWeek: Double = 0
     var hourlyRate: Double = 0
+    var clockStatus: ClockState = .out
 }

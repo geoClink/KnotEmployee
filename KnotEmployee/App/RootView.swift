@@ -32,7 +32,8 @@ struct ManagerTabView: View {
         TabView {
             ManagerHomeView().tabItem { Label("Home", systemImage: "house") }
             PlaceholderView(title: "Schedule").tabItem { Label("Schedule", systemImage: "calendar") }
-            PlaceholderView(title: "Team").tabItem { Label("Team", systemImage: "person.2") }
+            StaffDirectoryView()
+                .tabItem { Label("Team", systemImage: "person.2") }
             SettingsView().tabItem { Label("More", systemImage: "ellipsis") }
         }
         .tint(theme.rose)

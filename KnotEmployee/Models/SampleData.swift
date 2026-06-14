@@ -3,13 +3,18 @@ import Foundation
 extension AppStore {
     static var sample: AppStore {
         let maya = StaffMember(name: "Maya Okafor", jobTitle: "Lead Baker",
-                               hoursThisWeek: 31.5, hourlyRate: 24)
+                   hoursThisWeek: 31.5, hourlyRate: 24, clockStatus: .clockedIn)
         return AppStore(
             currentUser: maya,
             staff: [maya,
-                StaffMember(name: "Devon Hale", jobTitle: "Barista", hoursThisWeek: 22, hourlyRate: 18),
-                StaffMember(name: "Elena Voss", jobTitle: "Store Manager", role: .manager,
-                            hoursThisWeek: 38, hourlyRate: 32)],
+                StaffMember(name: "Devon Hale",  jobTitle: "Barista",       hoursThisWeek: 22, hourlyRate: 18, clockStatus: .out),
+                StaffMember(name: "Priya Raman", jobTitle: "Cashier",       hoursThisWeek: 18, hourlyRate: 17, clockStatus: .clockedIn),
+                StaffMember(name: "Theo Brandt", jobTitle: "Pastry Chef",   hoursThisWeek: 29, hourlyRate: 26, clockStatus: .onBreak),
+                StaffMember(name: "Aisha Bello", jobTitle: "Shift Lead",    hoursThisWeek: 33, hourlyRate: 22, clockStatus: .out),
+                StaffMember(name: "Jonah Klein", jobTitle: "Dishwasher",    hoursThisWeek: 24, hourlyRate: 16, clockStatus: .clockedIn),
+                StaffMember(name: "Elena Voss",  jobTitle: "Store Manager", role: .manager, hoursThisWeek: 38, hourlyRate: 32, clockStatus: .clockedIn)
+            ],
+            
             shift: [
                 Shift(day: "Mon", date: "Jun 9",  start: "6:00 AM", end: "2:00 PM",  role: "Lead Baker", note: "Sourdough + croissant prep."),
                 Shift(day: "Wed", date: "Jun 11", start: "6:00 AM", end: "2:00 PM",  role: "Lead Baker"),
