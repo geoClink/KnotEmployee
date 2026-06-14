@@ -55,6 +55,17 @@ struct PlaceholderView: View {
     }
 }
 
+struct RootGate: View {
+    @Environment(AppStore.self) private var store
+    var body: some View {
+        if store.isAuthenticated {
+            RootView()
+        } else {
+            LoginView()
+        }
+    }
+}
+
 #Preview {
     RootView()
         .environment(\.knotTheme, BakeryCoTheme())

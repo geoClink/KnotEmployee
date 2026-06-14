@@ -50,9 +50,12 @@ struct SettingsView: View {
                                             .padding(.horizontal, 14).padding(.vertical, 11)
                                         }
 
-                    Text("Sign out")
-                        .font(theme.bodyMedium(15)).foregroundStyle(theme.roseDeep)
-                        .frame(maxWidth: .infinity).padding(.vertical, 14)
+                    Button { store.signOut() } label: {
+                                            Text("Sign out")
+                                                .font(theme.bodyMedium(15)).foregroundStyle(theme.roseDeep)
+                                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                                        }
+                                        .buttonStyle(.plain)
                 }
                 .padding(20)
             }

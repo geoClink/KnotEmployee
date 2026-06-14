@@ -42,6 +42,29 @@ struct ManagerAlert: Identifiable {
         ManagerAlert(severity: .low,  text: "3 swap requests awaiting approval")
     ]
     
+    var isAuthenticated = false
+    
+    // Mock auth — in production this is a backend call that returns the user + role.
+    @discardableResult
+    func signIn(pin: String) -> Bool {
+        switch pin {
+        case "1234":   // staff
+            if let u = staff.first(where: { $0.name == "Maya Okafor" }) { currentUser = u }
+            isAuthenticated = true
+            return true
+        case "0000":   // manager
+            if let u = staff.first(where: { $0.role == .manager }) { currentUser = u }
+            isAuthenticated = true
+            return true
+        default:
+            return false
+        }
+    }
+
+    func signOut() {
+        isAuthenticated = false
+    }
+
     init(currentUser: StaffMember, staff: [StaffMember], shift: [Shift], openShifts: [OpenShift], swaps: [Swap], timeOff: [TimeOff]) {
         self.currentUser = currentUser
         self.staff = staff

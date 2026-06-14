@@ -28,7 +28,7 @@ struct KnotEmployeeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            RootGate()
                 .environment(\.knotTheme, BakeryCoTheme())
                 .environment(store)
         }
