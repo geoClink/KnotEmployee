@@ -2,26 +2,37 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(\.knotTheme) private var theme
-    @Environment(AppStore.self) private var store
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Layout.s4) {
-                Text("Good morning, \(store.currentUser.name.components(separatedBy: " ").first ?? "")")
-                    .font(theme.display(30)).foregroundStyle(theme.ink)
-                ForEach(store.shift) { ShiftCard(shift: $0) }
-            }
-            .padding(Layout.s5)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        TabView {
+            HomeView()
+                .tabItem { Label("Home", systemImage: "house") }
+
+            PlaceholderView(title: "Schedule")
+                .tabItem { Label("Schedule", systemImage: "calendar") }
+
+            NavigationStack { OpenShiftsView() }
+                .tabItem { Label("Swaps", systemImage: "arrow.left.arrow.right") }
+
+            PlaceholderView(title: "More")
+                .tabItem { Label("More", systemImage: "ellipsis") }
         }
-        .background(theme.cream.ignoresSafeArea())
-        .onAppear {
-            for fam in UIFont.familyNames.sorted() {
-                if fam.contains("Cormorant") || fam.contains("DM") || fam.contains("JetBrains") {
-                    print("Check \(fam)")
-                    for n in UIFont.fontNames(forFamilyName: fam) { print("    → \(n)")}
-                }
+        .tint(theme.rose)
+    }
+}
+
+struct PlaceholderView: View {
+    @Environment(\.knotTheme) private var theme
+    let title: String
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 8) {
+                Text(title).font(theme.display(28)).foregroundStyle(theme.ink)
+                Text("Coming soon").font(theme.body(14)).foregroundStyle(theme.inkMuted)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(theme.cream.ignoresSafeArea())
+            .navigationTitle(title)
         }
     }
 }
