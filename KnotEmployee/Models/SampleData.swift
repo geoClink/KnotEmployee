@@ -11,9 +11,12 @@ extension AppStore {
                 StaffMember(name: "Elena Voss", jobTitle: "Store Manager", role: .manager,
                             hoursThisWeek: 38, hourlyRate: 32)],
             shift: [
-                Shift(day: "Thu", date: "Jun 12", start: "7:00 AM", end: "3:00 PM", role: "Lead Baker"),
-                Shift(day: "Fri", date: "Jun 13", start: "6:00 AM", end: "12:00 PM", role: "Lead Baker",
-                      note: "Market day — double batch.", breakLabel: "30 min · unpaid")],
+                Shift(day: "Mon", date: "Jun 9",  start: "6:00 AM", end: "2:00 PM",  role: "Lead Baker", note: "Sourdough + croissant prep."),
+                Shift(day: "Wed", date: "Jun 11", start: "6:00 AM", end: "2:00 PM",  role: "Lead Baker"),
+                Shift(day: "Thu", date: "Jun 12", start: "7:00 AM", end: "3:00 PM",  role: "Lead Baker"),
+                Shift(day: "Fri", date: "Jun 13", start: "6:00 AM", end: "12:00 PM", role: "Lead Baker", note: "Market day — double batch.", breakLabel: "30 min · unpaid"),
+                Shift(day: "Sun", date: "Jun 15", start: "7:00 AM", end: "1:00 PM",  role: "Lead Baker")
+            ],
             openShifts: [
                 OpenShift(offeredBy: "Aisha Bello", day: "Sat", date: "Jun 14",
                           start: "2:00 PM", end: "9:00 PM", role: "Shift Lead", reason: "Family event")],

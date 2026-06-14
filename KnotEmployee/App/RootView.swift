@@ -8,7 +8,7 @@ struct RootView: View {
             HomeView()
                 .tabItem { Label("Home", systemImage: "house") }
 
-            PlaceholderView(title: "Schedule")
+            ScheduleView()
                 .tabItem { Label("Schedule", systemImage: "calendar") }
 
             NavigationStack { OpenShiftsView() }
