@@ -76,28 +76,43 @@ struct ManagerHomeView: View {
         }
     }
 
-    private var quickActions: some View {
-        let cols = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
-        return LazyVGrid(columns: cols, spacing: 10) {
-            actionCard(.calendar, "Schedule")
-            actionCard(.swap, "Approvals")
-            actionCard(.users, "Directory")
-            actionCard(.chart, "Labor report")
-        }
-    }
+    private var pendingCount: Int { store.openShifts.filter { $0.status == .pending }.count }
 
-    private func actionCard(_ icon: KnotIcon, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            IconView(icon: icon, size: 20, color: theme.inkSoft)
-                .frame(width: 38, height: 38)
-                .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: theme.rCard))
-            Text(label).font(theme.bodyMedium(14)).foregroundStyle(theme.ink)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.rCard))
-        .overlay(RoundedRectangle(cornerRadius: theme.rCard).strokeBorder(theme.line, lineWidth: 1))
-    }
+       private var quickActions: some View {
+           let cols = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+           return LazyVGrid(columns: cols, spacing: 10) {
+               actionCard(.calendar, "Schedule")
+               NavigationLink {
+                   ApprovalsView()
+               } label: {
+                   actionCard(.swap, "Approvals", badge: pendingCount)
+               }
+               .buttonStyle(.plain)
+               actionCard(.users, "Directory")
+               actionCard(.chart, "Labor report")
+           }
+       }
+
+       private func actionCard(_ icon: KnotIcon, _ label: String, badge: Int = 0) -> some View {
+           VStack(alignment: .leading, spacing: 10) {
+               HStack {
+                   IconView(icon: icon, size: 20, color: theme.inkSoft)
+                       .frame(width: 38, height: 38)
+                       .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: theme.rCard))
+                   Spacer()
+                   if badge > 0 {
+                       Text("\(badge)").font(theme.bodyMedium(12)).foregroundStyle(theme.paper)
+                           .frame(minWidth: 22, minHeight: 22)
+                           .background(theme.rose, in: Circle())
+                   }
+               }
+               Text(label).font(theme.bodyMedium(14)).foregroundStyle(theme.ink)
+           }
+           .frame(maxWidth: .infinity, alignment: .leading)
+           .padding(14)
+           .background(theme.card, in: RoundedRectangle(cornerRadius: theme.rCard))
+           .overlay(RoundedRectangle(cornerRadius: theme.rCard).strokeBorder(theme.line, lineWidth: 1))
+       }
 
     private func sevColor(_ s: ManagerAlert.Severity) -> Color {
         switch s {

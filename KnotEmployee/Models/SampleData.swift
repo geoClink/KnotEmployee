@@ -24,7 +24,10 @@ extension AppStore {
             ],
             openShifts: [
                 OpenShift(offeredBy: "Aisha Bello", day: "Sat", date: "Jun 14",
-                          start: "2:00 PM", end: "9:00 PM", role: "Shift Lead", reason: "Family event")],
+                          start: "2:00 PM", end: "9:00 PM", role: "Shift Lead", reason: "Family event"),
+                OpenShift(offeredBy: "Sofia Mendez", day: "Wed", date: "Jun 18",
+                          start: "8:00 AM", end: "4:00 PM", role: "Cashier", reason: "Exam", status: .pending)
+            ],
             swaps: [Swap(direction: .outgoing, status: .pending, withName: "Aisha Bello")],
             timeOff: [TimeOff(kind: .pto, status: .approved, range: "Jun 24 – Jun 26", days: 3, note: "Family trip")]
         )
