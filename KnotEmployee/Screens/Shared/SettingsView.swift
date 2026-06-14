@@ -8,6 +8,13 @@ struct SettingsView: View {
     @State private var notifSwaps = true
     @State private var notifMessages = true
     @State private var notifPay = false
+    
+    private var managerBinding: Binding<Bool> {
+            Binding(
+                get: { store.currentUser.role == .manager },
+                set: { store.currentUser.role = $0 ? .manager : .staff }
+            )
+        }
 
     var body: some View {
         NavigationStack {
@@ -32,6 +39,16 @@ struct SettingsView: View {
                         divider
                         valueRow(.bell, "Version", "1.0.0 (Phase 0)")
                     }
+                    
+                    group("Role (demo)") {
+                                            HStack(spacing: 12) {
+                                                iconTile(.users)
+                                                Text("Manager mode").font(theme.body(15)).foregroundStyle(theme.ink)
+                                                Spacer()
+                                                Toggle("", isOn: managerBinding).labelsHidden().tint(theme.green)
+                                            }
+                                            .padding(.horizontal, 14).padding(.vertical, 11)
+                                        }
 
                     Text("Sign out")
                         .font(theme.bodyMedium(15)).foregroundStyle(theme.roseDeep)

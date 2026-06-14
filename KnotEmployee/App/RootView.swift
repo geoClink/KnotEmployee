@@ -1,21 +1,39 @@
 import SwiftUI
 
 struct RootView: View {
-    @Environment(\.knotTheme) private var theme
+    @Environment(AppStore.self) private var store
 
     var body: some View {
+        if store.isManager {
+            ManagerTabView()
+        } else {
+            StaffTabView()
+        }
+    }
+}
+
+struct StaffTabView: View {
+    @Environment(\.knotTheme) private var theme
+    var body: some View {
         TabView {
-            HomeView()
-                .tabItem { Label("Home", systemImage: "house") }
-
-            ScheduleView()
-                .tabItem { Label("Schedule", systemImage: "calendar") }
-
+            HomeView().tabItem { Label("Home", systemImage: "house") }
+            ScheduleView().tabItem { Label("Schedule", systemImage: "calendar") }
             NavigationStack { OpenShiftsView() }
                 .tabItem { Label("Swaps", systemImage: "arrow.left.arrow.right") }
+            SettingsView().tabItem { Label("More", systemImage: "ellipsis") }
+        }
+        .tint(theme.rose)
+    }
+}
 
-            SettingsView()
-                .tabItem { Label("More", systemImage: "ellipsis") }
+struct ManagerTabView: View {
+    @Environment(\.knotTheme) private var theme
+    var body: some View {
+        TabView {
+            ManagerHomeView().tabItem { Label("Home", systemImage: "house") }
+            PlaceholderView(title: "Schedule").tabItem { Label("Schedule", systemImage: "calendar") }
+            PlaceholderView(title: "Team").tabItem { Label("Team", systemImage: "person.2") }
+            SettingsView().tabItem { Label("More", systemImage: "ellipsis") }
         }
         .tint(theme.rose)
     }
