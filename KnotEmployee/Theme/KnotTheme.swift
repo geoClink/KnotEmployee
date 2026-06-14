@@ -21,6 +21,7 @@ protocol KnotTheme {
     //type
     func display(_ size: CGFloat) -> Font
     func body(_ size: CGFloat) -> Font
+    func bodyMedium(_ size: CGFloat) -> Font
     func mono(_ size: CGFloat) -> Font
     //avatarts - derived from accents
     var avatarPalette: [Color] { get }

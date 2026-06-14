@@ -15,6 +15,14 @@ struct RootView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(theme.cream.ignoresSafeArea())
+        .onAppear {
+            for fam in UIFont.familyNames.sorted() {
+                if fam.contains("Cormorant") || fam.contains("DM") || fam.contains("JetBrains") {
+                    print("Check \(fam)")
+                    for n in UIFont.fontNames(forFamilyName: fam) { print("    → \(n)")}
+                }
+            }
+        }
     }
 }
 

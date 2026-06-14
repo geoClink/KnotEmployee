@@ -9,7 +9,7 @@ struct ShiftCard: View {
             HStack(spacing: Layout.s3) {
                 dateBlock
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(shift.timeRange).font(theme.body(15)).fontWeight(.medium).foregroundStyle(theme.ink)
+                    Text(shift.timeRange).font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
                     Text(shift.role).font(theme.body(13)).foregroundStyle(theme.inkMuted)
                 }
                 Spacer()
@@ -28,8 +28,8 @@ struct ShiftCard: View {
 
     private var dateBlock: some View {
         VStack(spacing: 1) {
-            Text(shift.day.uppercased()).font(theme.body(11)).fontWeight(.medium)
-            Text(shift.date.filter(\.isNumber)).font(theme.display(22)).fontWeight(.semibold)
+            Text(shift.day.uppercased()).font(theme.bodyMedium(11))
+            Text(shift.date.filter(\.isNumber)).font(theme.display(22))
         }
         .frame(width: 50, height: 54)
         .foregroundStyle(theme.inkSoft)

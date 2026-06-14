@@ -10,7 +10,8 @@ struct BakeryCoTheme: KnotTheme {
     let gold      = Color(hex: 0xB8924A); let green     = Color(hex: 0x5C7551); let olive    = Color(hex: 0x6B6440)
     let line      = Color(hex: 0xE2D5BD); let lineSoft  = Color(hex: 0xEFE6D2)
 
-    func display(_ s: CGFloat) -> Font { .custom("CormorantGaramond-Medium", size: s) }
-    func body(_ s: CGFloat) -> Font    { .custom("DMSans-Regular", size: s) }
-    func mono(_ s: CGFloat) -> Font    { .custom("JetBrainsMono-Regular", size: s) }
+    func display(_ s: CGFloat) -> Font    { .custom("CormorantGaramond-Medium", size: s, relativeTo: .title) }
+    func body(_ s: CGFloat) -> Font       { .custom("DMSans18pt-Regular",       size: s, relativeTo: .body) }
+    func bodyMedium(_ s: CGFloat) -> Font { .custom("DMSans18pt-Medium",        size: s, relativeTo: .body) }
+    func mono(_ s: CGFloat) -> Font       { .custom("JetBrainsMono-Regular",    size: s, relativeTo: .body) }
 }
