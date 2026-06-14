@@ -14,7 +14,7 @@ struct RootView: View {
             NavigationStack { OpenShiftsView() }
                 .tabItem { Label("Swaps", systemImage: "arrow.left.arrow.right") }
 
-            PlaceholderView(title: "More")
+            SettingsView()
                 .tabItem { Label("More", systemImage: "ellipsis") }
         }
         .tint(theme.rose)
