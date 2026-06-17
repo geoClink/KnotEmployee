@@ -31,7 +31,8 @@ struct OpenShiftsView: View {
     private var footerNote: some View {
         HStack(spacing: 10) {
             IconView(icon: .clock, size: 16, color: theme.inkMuted)
-            Text("Picking up a shift sends it to your manager for a quick approval before it’s yours.")
+                .accessibilityHidden(true)
+            Text("Picking up a shift sends it to your manager for a quick approval before it's yours.")
                 .font(theme.body(12)).foregroundStyle(theme.inkSoft)
         }
         .padding(12)
@@ -44,6 +45,7 @@ struct OpenShiftsView: View {
             IconView(icon: .handoff, size: 28, color: theme.inkFaint)
                 .frame(width: 64, height: 64)
                 .background(theme.creamDeep, in: Circle())
+                .accessibilityHidden(true)
             Text("No open shifts").font(theme.display(21)).foregroundStyle(theme.ink)
             Text("When a teammate gives up a shift, it appears here for anyone qualified to claim.")
                 .font(theme.body(13)).foregroundStyle(theme.inkMuted)

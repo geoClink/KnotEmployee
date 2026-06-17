@@ -5,7 +5,7 @@ struct NewTimeOffView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selectedKind: TimeOff.kind = .pto
+    @State private var selectedKind: TimeOff.Kind = .pto
     @State private var startDate = Date()
     @State private var endDate = Date()
     @State private var note = ""
@@ -43,7 +43,7 @@ struct NewTimeOffView: View {
             Text("TYPE").font(theme.mono(11)).foregroundStyle(theme.inkFaint)
                 .padding(.leading, 4)
             HStack(spacing: 0) {
-                ForEach([TimeOff.kind.pto, .sick, .personal], id: \.rawValue) { kind in
+                ForEach([TimeOff.Kind.pto, .sick, .personal], id: \.rawValue) { kind in
                     Button { selectedKind = kind } label: {
                         Text(kind.rawValue)
                             .font(theme.bodyMedium(14))

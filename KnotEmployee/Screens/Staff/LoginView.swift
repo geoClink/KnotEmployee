@@ -4,86 +4,71 @@ struct LoginView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
 
-    @State private var pin = ""
-    @State private var error = false
-
-    private let keys = ["1","2","3","4","5","6","7","8","9","","0","del"]
+    @State private var email = ""
+    @State private var password = ""
 
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             Spacer()
+
             VStack(spacing: 8) {
                 Text("THE BAKERY CO.").font(theme.mono(11)).foregroundStyle(theme.rose).tracking(3)
                 Text("Welcome back").font(theme.display(30)).foregroundStyle(theme.ink)
             }
-            .padding(.bottom, 28)
+            .padding(.bottom, 36)
 
-            HStack(spacing: 16) {
-                ForEach(0..<4, id: \.self) { i in
-                    Circle()
-                        .fill(i < pin.count ? dotColor : Color.clear)
-                        .overlay(Circle().strokeBorder(dotColor, lineWidth: 1.5))
-                        .frame(width: 14, height: 14)
+            VStack(spacing: 14) {
+                TextField("Email", text: $email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .font(theme.body(16))
+                    .padding(14)
+                    .background(theme.card, in: RoundedRectangle(cornerRadius: theme.rCard))
+                    .overlay(RoundedRectangle(cornerRadius: theme.rCard).strokeBorder(theme.line, lineWidth: 1))
+
+                SecureField("Password", text: $password)
+                    .textContentType(.password)
+                    .font(theme.body(16))
+                    .padding(14)
+                    .background(theme.card, in: RoundedRectangle(cornerRadius: theme.rCard))
+                    .overlay(RoundedRectangle(cornerRadius: theme.rCard).strokeBorder(theme.line, lineWidth: 1))
+            }
+
+            if let err = store.authError {
+                Text(err)
+                    .font(theme.body(13))
+                    .foregroundStyle(theme.roseDeep)
+                    .padding(.top, 12)
+            }
+
+            Button(action: signIn) {
+                Group {
+                    if store.isLoading {
+                        ProgressView().tint(theme.paper)
+                    } else {
+                        Text("Sign in").font(theme.bodyMedium(16)).foregroundStyle(theme.paper)
+                    }
                 }
+                .frame(maxWidth: .infinity).frame(height: 50)
+                .background(canSubmit ? theme.ink : theme.inkFaint, in: Capsule())
             }
-            .accessibilityElement()
-            .accessibilityLabel("\(pin.count) of 4 digits entered")
-            Text(error ? "Incorrect PIN. Try again." : "Enter your 4-digit PIN")
-                .font(theme.body(13)).foregroundStyle(error ? theme.roseDeep : theme.inkMuted)
-                .padding(.top, 14)
-
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
-                ForEach(keys, id: \.self) { key in keyButton(key) }
-            }
-            .frame(maxWidth: 260)
-            .padding(.top, 26)
+            .buttonStyle(.plain)
+            .disabled(!canSubmit || store.isLoading)
+            .padding(.top, 22)
 
             Spacer()
-            Text("Forgot PIN?").font(theme.body(13)).foregroundStyle(theme.rose).padding(.bottom, 20)
         }
-        .padding(.horizontal, 30)
+        .padding(.horizontal, 32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.cream.ignoresSafeArea())
     }
 
-    private var dotColor: Color { error ? theme.roseDeep : theme.rose }
+    private var canSubmit: Bool { !email.isEmpty && !password.isEmpty }
 
-    @ViewBuilder private func keyButton(_ key: String) -> some View {
-        if key.isEmpty {
-            Color.clear.frame(width: 64, height: 64)
-                .accessibilityHidden(true)
-        } else if key == "del" {
-            Button { delete() } label: {
-                IconView(icon: .chevronLeft, size: 22, color: theme.inkMuted)
-                    .frame(width: 64, height: 64)
-            }
-            .buttonStyle(.plain).frame(maxWidth: .infinity)
-            .accessibilityLabel("Delete")
-        } else {
-            Button { tap(key) } label: {
-                Text(key).font(theme.display(26)).foregroundStyle(theme.ink)
-                    .frame(width: 64, height: 64)
-                    .background(theme.card, in: Circle())
-                    .overlay(Circle().strokeBorder(theme.line, lineWidth: 1))
-            }
-            .buttonStyle(.plain).frame(maxWidth: .infinity)
-        }
-    }
-
-    private func tap(_ digit: String) {
-        guard pin.count < 4 else { return }
-        error = false
-        pin += digit
-        if pin.count == 4 {
-            if !store.signIn(pin: pin) {
-                error = true
-                pin = ""
-            }
-        }
-    }
-    private func delete() {
-        error = false
-        if !pin.isEmpty { pin.removeLast() }
+    private func signIn() {
+        Task { await store.signIn(email: email, password: password) }
     }
 }
 

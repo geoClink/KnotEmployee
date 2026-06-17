@@ -45,7 +45,7 @@ struct ShiftDetailView: View {
                 Text(value).font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
             }
             Spacer()
-            if let trailing { Text(trailing).font(theme.body(12)).foregroundStyle(theme.inkFaint) }
+            if let trailing { Text(trailing).font(theme.body(12)).foregroundStyle(theme.inkMuted) }
         }
         .knotCard()
     }

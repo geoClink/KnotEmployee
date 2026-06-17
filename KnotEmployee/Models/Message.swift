@@ -15,4 +15,6 @@ struct MessageThread: Identifiable, Hashable {
     var timestamp: String
     var unread: Bool
     var messages: [Message]
+    var isBroadcast: Bool = false
+    var broadcastRecipientCount: Int = 0
 }

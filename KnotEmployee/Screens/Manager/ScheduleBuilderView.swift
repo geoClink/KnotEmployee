@@ -7,7 +7,30 @@ struct ScheduleBuilderView: View {
     @State private var published = false
     @State private var editRow: Int?
     @State private var editDay: Int?
-    private let days = [("Mon","9"),("Tue","10"),("Wed","11"),("Thu","12"),("Fri","13"),("Sat","14"),("Sun","15")]
+    @State private var weekOffset = 0
+
+    private let baseMonday: Date = Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 9))!
+
+    private var weekStart: Date {
+        Calendar.current.date(byAdding: .day, value: weekOffset * 7, to: baseMonday)!
+    }
+
+    private var weekLabel: String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d"
+        let end = Calendar.current.date(byAdding: .day, value: 6, to: weekStart)!
+        return "\(fmt.string(from: weekStart)) – \(fmt.string(from: end))"
+    }
+
+    private var days: [(String, String)] {
+        let cal = Calendar.current
+        let dayNames = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+        return (0..<7).map { i in
+            let date = cal.date(byAdding: .day, value: i, to: weekStart)!
+            let num = cal.component(.day, from: date)
+            return (dayNames[i], String(num))
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -34,14 +57,22 @@ struct ScheduleBuilderView: View {
 
     private var weekStepper: some View {
         HStack {
-            IconView(icon: .chevronLeft, size: 18, color: theme.inkMuted)
+            Button { weekOffset -= 1; published = false } label: {
+                IconView(icon: .chevronLeft, size: 18, color: theme.inkMuted)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Previous week")
             Spacer()
             VStack(spacing: 1) {
-                Text("Jun 9 – 15").font(theme.bodyMedium(14)).foregroundStyle(theme.ink)
+                Text(weekLabel).font(theme.bodyMedium(14)).foregroundStyle(theme.ink)
                 Text("\(store.weekGrid.count) staff · 2 gaps").font(theme.body(11)).foregroundStyle(theme.inkMuted)
             }
             Spacer()
-            IconView(icon: .chevronRight, size: 18, color: theme.inkMuted)
+            Button { weekOffset += 1; published = false } label: {
+                IconView(icon: .chevronRight, size: 18, color: theme.inkMuted)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Next week")
         }
         .padding(.horizontal, 14).padding(.vertical, 8)
         .background(theme.card, in: Capsule())
@@ -108,7 +139,7 @@ struct ScheduleBuilderView: View {
                 Text("Off").font(theme.body(11)).foregroundStyle(theme.inkMuted)
             }
             Spacer()
-            Text("Tap a cell to edit").font(theme.body(11)).foregroundStyle(theme.inkFaint)
+            Text("Tap a cell to edit").font(theme.body(11)).foregroundStyle(theme.inkMuted)
         }
         .padding(.vertical, 12)
     }

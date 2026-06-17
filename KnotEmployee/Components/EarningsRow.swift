@@ -19,7 +19,7 @@ struct EarningsRow: View {
                 Text(shift.day.uppercased()).font(theme.bodyMedium(11))
                 Text(shift.date.filter(\.isNumber)).font(theme.display(22))
             }
-            .frame(width: 50, height: 54)
+            .frame(minHeight: 54).frame(width: 50)
             .foregroundStyle(theme.inkSoft)
             .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: theme.rCard))
 

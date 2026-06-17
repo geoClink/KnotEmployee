@@ -86,7 +86,7 @@ struct HomeView: View {
         }
         store.openShifts.append(
             OpenShift(offeredBy: store.currentUser.name, day: shift.day, date: shift.date,
-                      start: shift.start, end: shift.end, role: shift.role, status: .offered)
+                      start: shift.start, end: shift.end, role: shift.role, status: .open)
         )
     }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 struct MessagesView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
+    @State private var showCompose = false
 
     var body: some View {
         NavigationStack {
@@ -29,6 +30,15 @@ struct MessagesView: View {
             }
             .background(theme.cream.ignoresSafeArea())
             .navigationTitle("Messages")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showCompose = true } label: {
+                        IconView(icon: .plus, size: 22, color: theme.rose)
+                    }
+                    .accessibilityLabel("New message")
+                }
+            }
+            .sheet(isPresented: $showCompose) { NewMessageView() }
         }
     }
 

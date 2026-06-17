@@ -28,7 +28,7 @@ extension AppStore {
                 OpenShift(offeredBy: "Sofia Mendez", day: "Wed", date: "Jun 18",
                           start: "8:00 AM", end: "4:00 PM", role: "Cashier", reason: "Exam", status: .pending)
             ],
-            swaps: [Swap(direction: .outgoing, status: .pending, withName: "Aisha Bello")],
+            swaps: [Swap(fromName: "Maya Okafor", direction: .outgoing, status: .pending, withName: "Aisha Bello")],
             timeOff: [
                 TimeOff(staffName: "Maya Okafor", kind: .pto, status: .approved, range: "Jun 24 – Jun 26", days: 3, note: "Family trip"),
                 TimeOff(staffName: "Devon Hale", kind: .sick, status: .pending, range: "Jun 20 – Jun 21", days: 2, note: "Doctor appointment"),
@@ -49,7 +49,10 @@ extension AppStore {
                     Message(senderName: "Devon Hale", text: "Hey, any tips for the sourdough starter?", timestamp: "Mon", isFromCurrentUser: false),
                     Message(senderName: "Maya Okafor", text: "Feed it every 12 hours and keep it at room temp!", timestamp: "Mon", isFromCurrentUser: true),
                     Message(senderName: "Devon Hale", text: "Thanks for the sourdough tips!", timestamp: "Mon", isFromCurrentUser: false)
-                ])
+                ]),
+                MessageThread(participantName: "All Staff", lastMessage: "Schedule for Jun 9–15 is now live.", timestamp: "Sun", unread: false, messages: [
+                    Message(senderName: "Elena Voss", text: "Schedule for Jun 9–15 is now live. Check your shifts and flag any conflicts before Thursday.", timestamp: "Sun", isFromCurrentUser: false)
+                ], isBroadcast: true, broadcastRecipientCount: 6)
             ],
             notifications: [
                 AppNotification(icon: "calendar", title: "Shift tomorrow", body: "6:00 AM – 12:00 PM · Lead Baker", timestamp: "Just now", isRead: false, category: .shift),

@@ -6,11 +6,26 @@ struct MessageThreadPreview: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Avatar(name: thread.participantName, size: 44)
+            if thread.isBroadcast {
+                Image(systemName: "megaphone.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(theme.rose)
+                    .frame(width: 44, height: 44)
+                    .background(theme.roseSoft.opacity(0.3), in: Circle())
+                    .accessibilityHidden(true)
+            } else {
+                Avatar(name: thread.participantName, size: 44)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
-                    Text(thread.participantName)
-                        .font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
+                    HStack(spacing: 5) {
+                        Text(thread.participantName)
+                            .font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
+                        if thread.isBroadcast {
+                            Text("· \(thread.broadcastRecipientCount) recipients")
+                                .font(theme.body(12)).foregroundStyle(theme.inkMuted)
+                        }
+                    }
                     Spacer()
                     Text(thread.timestamp)
                         .font(theme.body(12)).foregroundStyle(theme.inkMuted)

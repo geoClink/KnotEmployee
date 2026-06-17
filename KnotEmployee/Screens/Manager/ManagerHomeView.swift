@@ -62,17 +62,30 @@ struct ManagerHomeView: View {
     }
 
     private func alertRow(_ a: ManagerAlert) -> some View {
-        HStack(spacing: 11) {
-            IconView(icon: .bell, size: 16, color: sevColor(a.severity))
-            Text(a.text).font(theme.body(13)).foregroundStyle(theme.ink)
-            Spacer()
-            IconView(icon: .chevronRight, size: 16, color: theme.inkFaint)
+        NavigationLink { alertDestination(a) } label: {
+            HStack(spacing: 11) {
+                IconView(icon: .bell, size: 16, color: sevColor(a.severity))
+                Text(a.text).font(theme.body(13)).foregroundStyle(theme.ink)
+                Spacer()
+                IconView(icon: .chevronRight, size: 16, color: theme.inkFaint)
+            }
+            .padding(.horizontal, 13).padding(.vertical, 11)
+            .background(theme.card, in: RoundedRectangle(cornerRadius: theme.rCard))
+            .overlay(RoundedRectangle(cornerRadius: theme.rCard).strokeBorder(theme.line, lineWidth: 1))
+            .overlay(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 2).fill(sevColor(a.severity)).frame(width: 3).padding(.vertical, 10)
+            }
         }
-        .padding(.horizontal, 13).padding(.vertical, 11)
-        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.rCard))
-        .overlay(RoundedRectangle(cornerRadius: theme.rCard).strokeBorder(theme.line, lineWidth: 1))
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2).fill(sevColor(a.severity)).frame(width: 3).padding(.vertical, 10)
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func alertDestination(_ a: ManagerAlert) -> some View {
+        switch a.destination {
+        case .schedule:   ScheduleBuilderView()
+        case .labor:      LaborReportView()
+        case .approvals:  ApprovalsView()
+        case .timeOff:    TimeOffApprovalsView()
         }
     }
 

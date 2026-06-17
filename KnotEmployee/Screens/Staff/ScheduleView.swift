@@ -6,12 +6,29 @@ struct ScheduleView: View {
     @State private var showNewSwap = false
     @State private var showNewTimeOff = false
 
-    private let template: [(String, String)] = [
-        ("Mon","9"),("Tue","10"),("Wed","11"),("Thu","12"),("Fri","13"),("Sat","14"),("Sun","15")
-    ]
+    @State private var weekOffset = 0
+
+    private let baseMonday: Date = Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 9))!
+
+    private var weekStart: Date {
+        Calendar.current.date(byAdding: .day, value: weekOffset * 7, to: baseMonday)!
+    }
+
+    private var weekLabel: String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d"
+        let end = Calendar.current.date(byAdding: .day, value: 6, to: weekStart)!
+        return "\(fmt.string(from: weekStart)) – \(fmt.string(from: end))"
+    }
+
     private var weekDays: [WeekDay] {
-        template.map { label, date in
-            WeekDay(label: label, date: date, shift: store.shift.first { $0.day == label })
+        let cal = Calendar.current
+        let dayNames = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+        return (0..<7).map { i in
+            let date = cal.date(byAdding: .day, value: i, to: weekStart)!
+            let num = cal.component(.day, from: date)
+            return WeekDay(label: dayNames[i], date: String(num),
+                           shift: weekOffset == 0 ? store.shift.first { $0.day == dayNames[i] } : nil)
         }
     }
 
@@ -37,11 +54,19 @@ struct ScheduleView: View {
 
     private var weekStepper: some View {
         HStack {
-            IconView(icon: .chevronLeft, size: 18, color: theme.inkMuted)
+            Button { weekOffset -= 1 } label: {
+                IconView(icon: .chevronLeft, size: 18, color: theme.inkMuted)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Previous week")
             Spacer()
-            Text("Jun 9 – 15").font(theme.bodyMedium(14)).foregroundStyle(theme.ink)
+            Text(weekLabel).font(theme.bodyMedium(14)).foregroundStyle(theme.ink)
             Spacer()
-            IconView(icon: .chevronRight, size: 18, color: theme.inkMuted)
+            Button { weekOffset += 1 } label: {
+                IconView(icon: .chevronRight, size: 18, color: theme.inkMuted)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Next week")
         }
         .padding(.horizontal, 14).padding(.vertical, 8)
         .background(theme.card, in: Capsule())
@@ -54,7 +79,7 @@ struct ScheduleView: View {
         }
         store.openShifts.append(
             OpenShift(offeredBy: store.currentUser.name, day: shift.day, date: shift.date,
-                      start: shift.start, end: shift.end, role: shift.role, status: .offered)
+                      start: shift.start, end: shift.end, role: shift.role, status: .open)
         )
     }
 

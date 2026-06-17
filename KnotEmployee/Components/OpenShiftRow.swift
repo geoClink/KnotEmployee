@@ -23,7 +23,7 @@ struct OpenShiftRow: View {
     private enum RowState { case available, mine, pending }
     private var state: RowState {
         if shift.status == .pending { return .pending }
-        if shift.offeredBy == "You" || shift.status == .offered { return .mine }
+        if shift.offeredBy == "You" { return .mine }
         return .available
     }
 
@@ -35,9 +35,9 @@ struct OpenShiftRow: View {
                     Text(shift.timeRange).font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
                     Text(shift.role).font(theme.body(13)).foregroundStyle(theme.inkMuted)
                     HStack(spacing: 5) {
-                        IconView(icon: .handoff, size: 13, color: theme.inkFaint)
+                        IconView(icon: .handoff, size: 13, color: theme.inkMuted)
                         Text(state == .mine ? "You put this up" : "Offered by \(shift.offeredBy)")
-                            .font(theme.body(12)).foregroundStyle(theme.inkFaint)
+                            .font(theme.body(12)).foregroundStyle(theme.inkMuted)
                     }
                     .padding(.top, 3)
                 }
@@ -81,7 +81,7 @@ struct OpenShiftRow: View {
             Text(shift.day.uppercased()).font(theme.bodyMedium(11))
             Text(shift.date.filter(\.isNumber)).font(theme.display(22))
         }
-        .frame(width: 50, height: 54)
+        .frame(minHeight: 54).frame(width: 50)
         .foregroundStyle(theme.inkSoft)
         .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: theme.rCard))
     }
@@ -92,7 +92,7 @@ struct OpenShiftRow: View {
         OpenShiftRow(shift: OpenShift(offeredBy: "Aisha Bello", day: "Sat", date: "Jun 14",
                      start: "2:00 PM", end: "9:00 PM", role: "Shift Lead", reason: "Family event"))
         OpenShiftRow(shift: OpenShift(offeredBy: "You", day: "Tue", date: "Jun 17",
-                     start: "7:00 AM", end: "3:00 PM", role: "Lead Baker", status: .offered))
+                     start: "7:00 AM", end: "3:00 PM", role: "Lead Baker", status: .open))
         OpenShiftRow(shift: OpenShift(offeredBy: "Devon Hale", day: "Sun", date: "Jun 15",
                      start: "12:00 PM", end: "8:00 PM", role: "Barista", status: .pending))
     }

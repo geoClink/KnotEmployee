@@ -9,7 +9,7 @@ import SwiftUI
 
 @main
 struct KnotEmployeeApp: App {
-    @State private var store = AppStore.sample
+    @State private var store = AppStore()
 
     init() {
         let appearance = UINavigationBarAppearance()
@@ -31,6 +31,7 @@ struct KnotEmployeeApp: App {
             RootGate()
                 .environment(\.knotTheme, BakeryCoTheme())
                 .environment(store)
+                .task { await store.restoreSession() }
         }
     }
 }

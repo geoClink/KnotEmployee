@@ -4,15 +4,21 @@ struct ShiftCard: View {
     @Environment(\.knotTheme) private var theme
     let shift: Shift
 
+    private var isOffered: Bool { shift.status == .offered }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Layout.s2) {
             HStack(spacing: Layout.s3) {
                 dateBlock
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(shift.timeRange).font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
+                    Text(shift.timeRange).font(theme.bodyMedium(15))
+                        .foregroundStyle(isOffered ? theme.inkMuted : theme.ink)
                     Text(shift.role).font(theme.body(13)).foregroundStyle(theme.inkMuted)
                 }
                 Spacer()
+                if isOffered {
+                    StatusBadge(status: .pending, small: true)
+                }
             }
             if let note = shift.note {
                 Text(note).font(theme.body(12)).foregroundStyle(theme.inkSoft)
@@ -24,6 +30,7 @@ struct ShiftCard: View {
         .padding(Layout.s3)
         .background(theme.card, in: .rect(cornerRadius: theme.rCard))
         .overlay(RoundedRectangle(cornerRadius: theme.rCard).strokeBorder(theme.line, lineWidth: 1))
+        .opacity(isOffered ? 0.6 : 1)
         .accessibilityElement(children: .combine)
     }
 
@@ -32,7 +39,7 @@ struct ShiftCard: View {
             Text(shift.day.uppercased()).font(theme.bodyMedium(11))
             Text(shift.date.filter(\.isNumber)).font(theme.display(22))
         }
-        .frame(width: 50, height: 54)
+        .frame(minHeight: 54).frame(width: 50)
         .foregroundStyle(theme.inkSoft)
         .background(theme.creamDeep, in: .rect(cornerRadius: theme.rCard))
     }

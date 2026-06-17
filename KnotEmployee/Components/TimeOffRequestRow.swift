@@ -13,7 +13,7 @@ struct TimeOffRequestRow: View {
                 Text(request.range)
                     .font(theme.body(13)).foregroundStyle(theme.inkMuted)
                 Text("\(request.days) day\(request.days == 1 ? "" : "s")")
-                    .font(theme.body(12)).foregroundStyle(theme.inkFaint)
+                    .font(theme.body(12)).foregroundStyle(theme.inkMuted)
                     .padding(.top, 1)
             }
             Spacer()
@@ -38,7 +38,7 @@ struct TimeOffRequestRow: View {
             Text("\(request.days)")
                 .font(theme.display(22))
         }
-        .frame(width: 50, height: 54)
+        .frame(minHeight: 54).frame(width: 50)
         .foregroundStyle(theme.inkSoft)
         .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: theme.rCard))
     }

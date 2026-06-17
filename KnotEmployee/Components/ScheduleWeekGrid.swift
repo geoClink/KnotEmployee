@@ -40,7 +40,7 @@ struct ScheduleWeekGrid: View {
                 Text(day.label.uppercased()).font(theme.body(10)).foregroundStyle(theme.inkMuted)
                 Text(day.date).font(theme.display(19)).foregroundStyle(shift != nil ? theme.ink : theme.inkFaint)
             }
-            .frame(width: 46)
+            .frame(minHeight: 40).frame(width: 46)
 
             if let shift {
                 HStack {

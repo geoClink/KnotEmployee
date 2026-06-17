@@ -14,6 +14,7 @@ struct RootView: View {
 
 struct StaffTabView: View {
     @Environment(\.knotTheme) private var theme
+    @Environment(AppStore.self) private var store
     var body: some View {
         TabView {
             HomeView().tabItem { Label("Home", systemImage: "house") }
@@ -21,6 +22,7 @@ struct StaffTabView: View {
             MessagesView().tabItem { Label("Messages", systemImage: "bubble.left") }
             NavigationStack { NotificationsView() }
                 .tabItem { Label("Alerts", systemImage: "bell") }
+                .badge(store.unreadNotificationCount)
             StaffMoreView().tabItem { Label("More", systemImage: "ellipsis") }
         }
         .tint(theme.rose)

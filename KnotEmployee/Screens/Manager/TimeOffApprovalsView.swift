@@ -33,7 +33,7 @@ struct TimeOffApprovalsView: View {
                     Text("\(request.kind.rawValue) · \(request.range)")
                         .font(theme.body(13)).foregroundStyle(theme.inkMuted)
                     Text("\(request.days) day\(request.days == 1 ? "" : "s")")
-                        .font(theme.body(12)).foregroundStyle(theme.inkFaint)
+                        .font(theme.body(12)).foregroundStyle(theme.inkMuted)
                 }
                 Spacer()
                 StatusBadge(status: .pending, small: true)

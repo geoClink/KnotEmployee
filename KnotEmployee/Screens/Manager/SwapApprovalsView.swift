@@ -4,21 +4,39 @@ struct ApprovalsView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
 
-    private var pending: [OpenShift] { store.openShifts.filter { $0.status == .pending } }
+    private var pendingPickups: [OpenShift] { store.openShifts.filter { $0.status == .pending } }
+    private var pendingSwaps: [Swap] { store.swaps.filter { $0.status == .pending } }
+    private var allEmpty: Bool { pendingPickups.isEmpty && pendingSwaps.isEmpty }
 
     var body: some View {
         ScrollView {
-            if pending.isEmpty {
+            if allEmpty {
                 emptyState
             } else {
-                VStack(spacing: 12) {
-                    ForEach(pending) { shift in approvalCard(shift) }
+                VStack(alignment: .leading, spacing: 20) {
+                    if !pendingPickups.isEmpty {
+                        sectionHeader("Open shift pickups")
+                        VStack(spacing: 12) {
+                            ForEach(pendingPickups) { shift in approvalCard(shift) }
+                        }
+                    }
+                    if !pendingSwaps.isEmpty {
+                        sectionHeader("Shift swaps")
+                        VStack(spacing: 12) {
+                            ForEach(pendingSwaps) { swap in swapCard(swap) }
+                        }
+                    }
                 }
                 .padding(20)
             }
         }
         .background(theme.cream.ignoresSafeArea())
         .navigationTitle("Approvals")
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title).font(theme.display(18)).foregroundStyle(theme.ink)
+            .accessibilityAddTraits(.isHeader)
     }
 
     private func approvalCard(_ shift: OpenShift) -> some View {
@@ -29,7 +47,7 @@ struct ApprovalsView: View {
                     Text(shift.timeRange).font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
                     Text(shift.role).font(theme.body(12)).foregroundStyle(theme.inkMuted)
                     Text("Pickup from \(shift.offeredBy)")
-                        .font(theme.body(12)).foregroundStyle(theme.inkFaint).padding(.top, 3)
+                        .font(theme.body(12)).foregroundStyle(theme.inkMuted).padding(.top, 3)
                 }
                 Spacer()
                 StatusBadge(status: .pending, small: true)
@@ -68,8 +86,43 @@ struct ApprovalsView: View {
             Text(shift.day.uppercased()).font(theme.bodyMedium(11))
             Text(shift.date.filter(\.isNumber)).font(theme.display(22))
         }
-        .frame(width: 50, height: 54).foregroundStyle(theme.inkSoft)
+        .frame(minHeight: 54).frame(width: 50).foregroundStyle(theme.inkSoft)
         .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: theme.rCard))
+    }
+
+    private func swapCard(_ swap: Swap) -> some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Avatar(name: swap.fromName, size: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(swap.fromName).font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
+                    Text("Wants to swap with \(swap.withName)")
+                        .font(theme.body(13)).foregroundStyle(theme.inkMuted)
+                }
+                Spacer()
+                StatusBadge(status: .pending, small: true)
+            }
+            HStack(spacing: 8) {
+                Button { denySwap(swap) } label: {
+                    Text("Deny").font(theme.bodyMedium(14)).foregroundStyle(theme.inkSoft)
+                        .frame(maxWidth: .infinity).frame(height: 40)
+                        .background(Capsule().strokeBorder(theme.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Deny swap request from \(swap.fromName)")
+                Button { approveSwap(swap) } label: {
+                    HStack(spacing: 6) {
+                        IconView(icon: .check, size: 16, color: theme.paper)
+                        Text("Approve").font(theme.bodyMedium(14)).foregroundStyle(theme.paper)
+                    }
+                    .frame(maxWidth: .infinity).frame(height: 40)
+                    .background(theme.ink, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Approve swap request from \(swap.fromName)")
+            }
+        }
+        .knotCard(padding: 13)
     }
 
     private var emptyState: some View {
@@ -87,11 +140,21 @@ struct ApprovalsView: View {
     }
 
     private func approve(_ shift: OpenShift) {
-        store.openShifts.removeAll { $0.id == shift.id }   // assigned & resolved
+        store.openShifts.removeAll { $0.id == shift.id }
     }
     private func deny(_ shift: OpenShift) {
         if let i = store.openShifts.firstIndex(where: { $0.id == shift.id }) {
-            store.openShifts[i].status = .open             // back to available
+            store.openShifts[i].status = .open
+        }
+    }
+    private func approveSwap(_ swap: Swap) {
+        if let i = store.swaps.firstIndex(where: { $0.id == swap.id }) {
+            store.swaps[i].status = .approved
+        }
+    }
+    private func denySwap(_ swap: Swap) {
+        if let i = store.swaps.firstIndex(where: { $0.id == swap.id }) {
+            store.swaps[i].status = .denied
         }
     }
 }

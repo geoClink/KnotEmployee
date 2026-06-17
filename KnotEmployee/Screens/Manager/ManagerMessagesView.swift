@@ -6,12 +6,14 @@ struct ManagerMessagesView: View {
 
     enum Filter: String, CaseIterable { case all = "All", unread = "Unread", broadcast = "Broadcast" }
     @State private var filter: Filter = .all
+    @State private var showCompose = false
+    @State private var showBroadcast = false
 
     private var filteredThreads: [MessageThread] {
         switch filter {
-        case .all:       store.threads
-        case .unread:    store.threads.filter(\.unread)
-        case .broadcast: []   // placeholder — no broadcast threads yet
+        case .all:       store.threads.filter { !$0.isBroadcast }
+        case .unread:    store.threads.filter { $0.unread && !$0.isBroadcast }
+        case .broadcast: store.threads.filter(\.isBroadcast)
         }
     }
 
@@ -43,6 +45,19 @@ struct ManagerMessagesView: View {
             }
             .background(theme.cream.ignoresSafeArea())
             .navigationTitle("Messages")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        if filter == .broadcast { showBroadcast = true }
+                        else { showCompose = true }
+                    } label: {
+                        IconView(icon: .plus, size: 22, color: theme.rose)
+                    }
+                    .accessibilityLabel(filter == .broadcast ? "New broadcast" : "New message")
+                }
+            }
+            .sheet(isPresented: $showCompose) { NewMessageView() }
+            .sheet(isPresented: $showBroadcast) { NewBroadcastView() }
         }
     }
 
