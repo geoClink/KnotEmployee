@@ -110,6 +110,43 @@ struct DBNotification: Decodable {
     }
 }
 
+struct DBThread: Decodable {
+    let id: UUID
+    let isBroadcast: Bool
+    let broadcastRecipientCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case isBroadcast             = "is_broadcast"
+        case broadcastRecipientCount = "broadcast_recipient_count"
+    }
+}
+
+struct DBThreadParticipant: Decodable {
+    let threadId: UUID
+    let employeeId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case threadId  = "thread_id"
+        case employeeId = "employee_id"
+    }
+}
+
+struct DBMessage: Decodable {
+    let id: UUID
+    let threadId: UUID
+    let senderId: UUID
+    let text: String
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id, text
+        case threadId  = "thread_id"
+        case senderId  = "sender_id"
+        case createdAt = "created_at"
+    }
+}
+
 // MARK: - Converters
 
 private let dbDateParser: DateFormatter = {
@@ -151,6 +188,7 @@ extension DBShift {
             id: id,
             day: day,
             date: formatDBDate(shiftDate),
+            shiftDate: shiftDate,
             start: startTime,
             end: endTime,
             role: role,

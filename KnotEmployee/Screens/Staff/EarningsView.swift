@@ -4,26 +4,25 @@ struct EarningsView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
 
-    private let shifts: [EarningsShift] = [
-        EarningsShift(day: "Mon", date: "Jun 9",  hours: 8, rate: 24),
-        EarningsShift(day: "Wed", date: "Jun 11", hours: 8, rate: 24),
-        EarningsShift(day: "Thu", date: "Jun 12", hours: 8, rate: 24),
-        EarningsShift(day: "Fri", date: "Jun 13", hours: 6, rate: 24),
-        EarningsShift(day: "Sun", date: "Jun 15", hours: 6, rate: 24)
-    ]
-
-    private var totalHours: Double { shifts.reduce(0) { $0 + $1.hours } }
-    private var totalGross: Double { shifts.reduce(0) { $0 + $1.gross } }
+    private var totalHours: Double { store.earningsShifts.reduce(0) { $0 + $1.hours } }
+    private var totalGross: Double { store.earningsShifts.reduce(0) { $0 + $1.gross } }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     heroCard
-                    section("This week") {
-                        VStack(spacing: 10) {
-                            ForEach(shifts) { shift in
-                                EarningsRow(shift: shift)
+                    if store.earningsShifts.isEmpty {
+                        Text("No shifts scheduled this week.")
+                            .font(theme.body(14)).foregroundStyle(theme.inkMuted)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 20)
+                    } else {
+                        section("This week") {
+                            VStack(spacing: 10) {
+                                ForEach(store.earningsShifts) { shift in
+                                    EarningsRow(shift: shift)
+                                }
                             }
                         }
                     }
@@ -33,6 +32,8 @@ struct EarningsView: View {
             }
             .background(theme.cream.ignoresSafeArea())
             .navigationTitle("Earnings")
+            .task { await store.fetchEarnings() }
+            .refreshable { await store.fetchEarnings() }
         }
     }
 

@@ -73,23 +73,10 @@ struct NewBroadcastView: View {
 
     private func send() {
         guard !messageText.isEmpty else { return }
-        let fmt = DateFormatter()
-        fmt.dateFormat = "h:mm a"
-        let timestamp = fmt.string(from: Date())
-        let thread = MessageThread(
-            participantName: "All Staff",
-            lastMessage: messageText,
-            timestamp: timestamp,
-            unread: false,
-            messages: [
-                Message(senderName: store.currentUser.name, text: messageText,
-                        timestamp: timestamp, isFromCurrentUser: true)
-            ],
-            isBroadcast: true,
-            broadcastRecipientCount: recipientCount
-        )
-        store.threads.insert(thread, at: 0)
-        dismiss()
+        Task {
+            try? await store.createBroadcastThread(message: messageText)
+            dismiss()
+        }
     }
 }
 

@@ -9,7 +9,12 @@ struct ScheduleBuilderView: View {
     @State private var editDay: Int?
     @State private var weekOffset = 0
 
-    private let baseMonday: Date = Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 9))!
+    private var baseMonday: Date {
+        var cal = Calendar.current
+        cal.firstWeekday = 2
+        let comps = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())
+        return cal.date(from: comps) ?? Date()
+    }
 
     private var weekStart: Date {
         Calendar.current.date(byAdding: .day, value: weekOffset * 7, to: baseMonday)!
@@ -44,12 +49,14 @@ struct ScheduleBuilderView: View {
             }
             .background(theme.cream.ignoresSafeArea())
             .navigationTitle("Schedule")
+            .task(id: weekOffset) { await store.fetchWeekGrid(weekStart: weekStart) }
+            .onChange(of: weekOffset) { published = false }
             .sheet(isPresented: Binding(
                 get: { editRow != nil && editDay != nil },
                 set: { if !$0 { editRow = nil; editDay = nil } }
             )) {
                 if let r = editRow, let d = editDay {
-                    AddEditShiftView(rowIndex: r, dayIndex: d)
+                    AddEditShiftView(rowIndex: r, dayIndex: d, weekStart: weekStart)
                 }
             }
         }
@@ -57,7 +64,7 @@ struct ScheduleBuilderView: View {
 
     private var weekStepper: some View {
         HStack {
-            Button { weekOffset -= 1; published = false } label: {
+            Button { weekOffset -= 1 } label: {
                 IconView(icon: .chevronLeft, size: 18, color: theme.inkMuted)
             }
             .buttonStyle(.plain)
@@ -68,7 +75,7 @@ struct ScheduleBuilderView: View {
                 Text("\(store.weekGrid.count) staff · 2 gaps").font(theme.body(11)).foregroundStyle(theme.inkMuted)
             }
             Spacer()
-            Button { weekOffset += 1; published = false } label: {
+            Button { weekOffset += 1 } label: {
                 IconView(icon: .chevronRight, size: 18, color: theme.inkMuted)
             }
             .buttonStyle(.plain)
@@ -153,7 +160,12 @@ struct ScheduleBuilderView: View {
                     .overlay(Capsule().strokeBorder(theme.line, lineWidth: 1))
             }
             .buttonStyle(.plain)
-            Button { published = true } label: {
+            Button {
+                Task {
+                    await store.publishSchedule(weekStart: weekStart)
+                    published = true
+                }
+            } label: {
                 HStack(spacing: 6) {
                     IconView(icon: .check, size: 16, color: theme.paper)
                     Text(published ? "Published" : "Publish").font(theme.bodyMedium(15)).foregroundStyle(theme.paper)
@@ -162,6 +174,7 @@ struct ScheduleBuilderView: View {
                 .background(published ? theme.green : theme.ink, in: Capsule())
             }
             .buttonStyle(.plain)
+            .disabled(published)
         }
         .padding(16)
         .background(theme.cream)

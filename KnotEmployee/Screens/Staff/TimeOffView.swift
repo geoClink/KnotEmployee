@@ -25,6 +25,7 @@ struct TimeOffView: View {
                 }
                 .padding(20)
             }
+            .refreshable { try? await store.loadInitialData() }
             .background(theme.cream.ignoresSafeArea())
             .navigationTitle("Time off")
             .toolbar {

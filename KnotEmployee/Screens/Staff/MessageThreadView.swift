@@ -45,18 +45,15 @@ struct MessageThreadView: View {
 
     private func sendMessage() {
         guard !newMessage.isEmpty else { return }
-        let msg = Message(
-            senderName: store.currentUser.name,
-            text: newMessage,
-            timestamp: "Just now",
-            isFromCurrentUser: true
-        )
-        if let i = store.threads.firstIndex(where: { $0.id == thread.id }) {
-            store.threads[i].messages.append(msg)
-            store.threads[i].lastMessage = newMessage
-            store.threads[i].timestamp = "Just now"
-        }
+        let text = newMessage
         newMessage = ""
+        Task {
+            if let dbId = thread.dbId {
+                try? await store.sendMessage(threadId: dbId, text: text)
+            } else if let targetId = thread.targetEmployeeId {
+                try? await store.createThread(withEmployeeId: targetId, initialMessage: text)
+            }
+        }
     }
 }
 

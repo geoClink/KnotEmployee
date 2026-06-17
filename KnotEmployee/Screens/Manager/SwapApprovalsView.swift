@@ -3,6 +3,7 @@ import SwiftUI
 struct ApprovalsView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
+    @State private var processingIds = Set<UUID>()
 
     private var pendingPickups: [OpenShift] { store.openShifts.filter { $0.status == .pending } }
     private var pendingSwaps: [Swap] { store.swaps.filter { $0.status == .pending } }
@@ -140,22 +141,24 @@ struct ApprovalsView: View {
     }
 
     private func approve(_ shift: OpenShift) {
-        store.openShifts.removeAll { $0.id == shift.id }
+        guard !processingIds.contains(shift.id) else { return }
+        processingIds.insert(shift.id)
+        Task { await store.approveShiftPickup(id: shift.id); processingIds.remove(shift.id) }
     }
     private func deny(_ shift: OpenShift) {
-        if let i = store.openShifts.firstIndex(where: { $0.id == shift.id }) {
-            store.openShifts[i].status = .open
-        }
+        guard !processingIds.contains(shift.id) else { return }
+        processingIds.insert(shift.id)
+        Task { await store.denyShiftPickup(id: shift.id); processingIds.remove(shift.id) }
     }
     private func approveSwap(_ swap: Swap) {
-        if let i = store.swaps.firstIndex(where: { $0.id == swap.id }) {
-            store.swaps[i].status = .approved
-        }
+        guard !processingIds.contains(swap.id) else { return }
+        processingIds.insert(swap.id)
+        Task { await store.approveSwap(id: swap.id); processingIds.remove(swap.id) }
     }
     private func denySwap(_ swap: Swap) {
-        if let i = store.swaps.firstIndex(where: { $0.id == swap.id }) {
-            store.swaps[i].status = .denied
-        }
+        guard !processingIds.contains(swap.id) else { return }
+        processingIds.insert(swap.id)
+        Task { await store.denySwap(id: swap.id); processingIds.remove(swap.id) }
     }
 }
 

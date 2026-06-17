@@ -3,6 +3,7 @@ import SwiftUI
 struct TimeOffApprovalsView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
+    @State private var processingIds = Set<UUID>()
 
     private var pending: [TimeOff] { store.timeOff.filter { $0.status == .pending } }
 
@@ -102,15 +103,15 @@ struct TimeOffApprovalsView: View {
     }
 
     private func approve(_ request: TimeOff) {
-        if let i = store.timeOff.firstIndex(where: { $0.id == request.id }) {
-            store.timeOff[i].status = .approved
-        }
+        guard !processingIds.contains(request.id) else { return }
+        processingIds.insert(request.id)
+        Task { await store.approveTimeOff(id: request.id); processingIds.remove(request.id) }
     }
 
     private func deny(_ request: TimeOff) {
-        if let i = store.timeOff.firstIndex(where: { $0.id == request.id }) {
-            store.timeOff[i].status = .denied
-        }
+        guard !processingIds.contains(request.id) else { return }
+        processingIds.insert(request.id)
+        Task { await store.denyTimeOff(id: request.id); processingIds.remove(request.id) }
     }
 }
 

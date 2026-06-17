@@ -142,10 +142,10 @@ struct NewSwapView: View {
 
     private func submit() {
         guard let person = selectedPerson else { return }
-        store.swaps.append(
-            Swap(fromName: store.currentUser.name, direction: .outgoing, status: .pending, withName: person.name)
-        )
-        dismiss()
+        Task {
+            await store.submitSwap(withEmployee: person)
+            dismiss()
+        }
     }
 }
 

@@ -7,7 +7,10 @@ struct HomeView: View {
     @State private var showNewTimeOff = false
 
     private let order = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
-    private let today = "Thu"
+    private var today: String {
+        let symbols = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+        return symbols[Calendar.current.component(.weekday, from: Date()) - 1]
+    }
 
     private var todayShift: Shift? { store.shift.first { $0.day == today } }
     private var upcoming: [Shift] {
@@ -21,7 +24,6 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     greeting
                     ClockStatusBanner()
-
                     if let todayShift {
                         section("Today’s shift") {
                             shiftLink(todayShift)
@@ -35,6 +37,7 @@ struct HomeView: View {
                 }
                 .padding(20)
             }
+            .refreshable { try? await store.loadInitialData() }
             .background(theme.cream.ignoresSafeArea())
             .sheet(isPresented: $showNewSwap) { NewSwapView() }
             .sheet(isPresented: $showNewTimeOff) { NewTimeOffView() }
@@ -51,9 +54,17 @@ struct HomeView: View {
 
     private var greeting: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("Thursday, June 12").font(theme.body(13)).foregroundStyle(theme.inkMuted)
-            Text("Good morning, \(firstName)").font(theme.display(30)).foregroundStyle(theme.ink)
+            Text(Date().formatted(.dateTime.weekday(.wide).month(.wide).day()))
+                .font(theme.body(13)).foregroundStyle(theme.inkMuted)
+            Text("Good \(timeOfDayGreeting), \(firstName)").font(theme.display(30)).foregroundStyle(theme.ink)
         }
+    }
+
+    private var timeOfDayGreeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour < 12 { return "morning" }
+        if hour < 17 { return "afternoon" }
+        return "evening"
     }
 
     private func shiftLink(_ shift: Shift) -> some View {
@@ -80,14 +91,7 @@ struct HomeView: View {
         store.currentUser.name.split(separator: " ").first.map(String.init) ?? ""
     }
     private func giveUp(_ shift: Shift) {
-        // Mark the shift as offered so it shows visually
-        if let i = store.shift.firstIndex(where: { $0.id == shift.id }) {
-            store.shift[i].status = .offered
-        }
-        store.openShifts.append(
-            OpenShift(offeredBy: store.currentUser.name, day: shift.day, date: shift.date,
-                      start: shift.start, end: shift.end, role: shift.role, status: .open)
-        )
+        Task { await store.offerShift(shift) }
     }
 }
 

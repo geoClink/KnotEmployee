@@ -118,18 +118,11 @@ struct NewTimeOffView: View {
     }
 
     private func submit() {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "MMM d"
-        let rangeStr = totalDays == 1
-            ? fmt.string(from: startDate)
-            : "\(fmt.string(from: startDate)) – \(fmt.string(from: endDate))"
-
-        store.timeOff.append(
-            TimeOff(kind: selectedKind, status: .pending,
-                    range: rangeStr, days: totalDays,
-                    note: note.isEmpty ? nil : note)
-        )
-        dismiss()
+        Task {
+            try? await store.submitTimeOff(kind: selectedKind, startDate: startDate,
+                                           endDate: endDate, note: note.isEmpty ? nil : note)
+            dismiss()
+        }
     }
 }
 

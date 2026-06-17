@@ -32,6 +32,7 @@ struct KnotEmployeeApp: App {
                 .environment(\.knotTheme, BakeryCoTheme())
                 .environment(store)
                 .task { await store.restoreSession() }
+                .onOpenURL { url in Task { await store.handleDeepLink(url) } }
         }
     }
 }

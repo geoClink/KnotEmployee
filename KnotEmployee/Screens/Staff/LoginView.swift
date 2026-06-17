@@ -6,6 +6,7 @@ struct LoginView: View {
 
     @State private var email = ""
     @State private var password = ""
+    @State private var showForgotPassword = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -43,6 +44,10 @@ struct LoginView: View {
                     .padding(.top, 12)
             }
 
+            Button("Forgot password?") { showForgotPassword = true }
+                .font(theme.body(13)).foregroundStyle(theme.inkMuted)
+                .padding(.top, 4)
+
             Button(action: signIn) {
                 Group {
                     if store.isLoading {
@@ -63,6 +68,7 @@ struct LoginView: View {
         .padding(.horizontal, 32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.cream.ignoresSafeArea())
+        .sheet(isPresented: $showForgotPassword) { ForgotPasswordView() }
     }
 
     private var canSubmit: Bool { !email.isEmpty && !password.isEmpty }

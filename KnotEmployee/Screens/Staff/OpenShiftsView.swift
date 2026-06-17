@@ -18,14 +18,13 @@ struct OpenShiftsView: View {
                 .padding(20)
             }
         }
+        .refreshable { try? await store.loadInitialData() }
         .background(theme.cream.ignoresSafeArea())
         .navigationTitle("Open shifts")
     }
 
     private func pickUp(_ shift: OpenShift) {
-        if let i = store.openShifts.firstIndex(where: { $0.id == shift.id }) {
-            store.openShifts[i].status = .pending   // stays visible as "Pending approval"
-        }
+        Task { await store.pickUpShift(id: shift.id) }
     }
 
     private var footerNote: some View {

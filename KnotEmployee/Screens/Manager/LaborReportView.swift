@@ -2,33 +2,30 @@ import SwiftUI
 
 struct LaborReportView: View {
     @Environment(\.knotTheme) private var theme
+    @Environment(AppStore.self) private var store
 
-    private let weekData: [LaborDay] = [
-        LaborDay(day: "Monday",    scheduled: 388, actual: 372, budget: 412),
-        LaborDay(day: "Tuesday",   scheduled: 410, actual: 425, budget: 412),
-        LaborDay(day: "Wednesday", scheduled: 356, actual: 348, budget: 380),
-        LaborDay(day: "Thursday",  scheduled: 392, actual: 390, budget: 412),
-        LaborDay(day: "Friday",    scheduled: 440, actual: 438, budget: 450),
-        LaborDay(day: "Saturday",  scheduled: 500, actual: 485, budget: 520),
-        LaborDay(day: "Sunday",    scheduled: 280, actual: 265, budget: 300)
-    ]
-
-    private var totalScheduled: Double { weekData.reduce(0) { $0 + $1.scheduled } }
-    private var totalActual: Double { weekData.reduce(0) { $0 + $1.actual } }
-    private var totalBudget: Double { weekData.reduce(0) { $0 + $1.budget } }
-    private var totalHours: Double { 168 }
+    private var totalActual: Double { store.laborReport.reduce(0) { $0 + $1.actual } }
+    private var totalBudget: Double { store.laborReport.reduce(0) { $0 + $1.budget } }
+    private var totalHours: Double { store.staff.reduce(0) { $0 + $1.hoursThisWeek } }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 summaryTiles
-                section("Daily breakdown") {
-                    VStack(spacing: 14) {
-                        ForEach(weekData) { day in
-                            LaborCostBar(data: day)
+                if store.laborReport.isEmpty {
+                    Text("No shift data for this week.")
+                        .font(theme.body(14)).foregroundStyle(theme.inkMuted)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 20)
+                } else {
+                    section("Daily breakdown") {
+                        VStack(spacing: 14) {
+                            ForEach(store.laborReport) { day in
+                                LaborCostBar(data: day)
+                            }
                         }
+                        .knotCard()
                     }
-                    .knotCard()
                 }
                 exportButton
             }
@@ -36,6 +33,8 @@ struct LaborReportView: View {
         }
         .background(theme.cream.ignoresSafeArea())
         .navigationTitle("Labor report")
+        .task { await store.fetchLaborReport() }
+        .refreshable { await store.fetchLaborReport() }
     }
 
     private var summaryTiles: some View {

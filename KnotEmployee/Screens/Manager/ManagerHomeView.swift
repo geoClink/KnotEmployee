@@ -10,14 +10,17 @@ struct ManagerHomeView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     header
                     laborCard
-                    section("Alerts") {
-                        VStack(spacing: 8) { ForEach(store.alerts) { alertRow($0) } }
+                    if !store.computedAlerts.isEmpty {
+                        section("Alerts") {
+                            VStack(spacing: 8) { ForEach(store.computedAlerts) { alertRow($0) } }
+                        }
                     }
                     section("Quick actions") { quickActions }
                 }
                 .padding(20)
             }
             .background(theme.cream.ignoresSafeArea())
+            .task { await store.fetchLaborMetrics() }
         }
     }
 
@@ -27,7 +30,8 @@ struct ManagerHomeView: View {
                 .padding(.horizontal, 9).padding(.vertical, 3)
                 .background(theme.gold.opacity(0.16), in: Capsule())
             Text("The Bakery Co.").font(theme.display(28)).foregroundStyle(theme.ink)
-            Text("Thursday, June 12").font(theme.body(13)).foregroundStyle(theme.inkMuted)
+            Text(Date().formatted(.dateTime.weekday(.wide).month(.wide).day()))
+                .font(theme.body(13)).foregroundStyle(theme.inkMuted)
         }
     }
 

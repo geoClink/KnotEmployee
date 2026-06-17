@@ -59,18 +59,15 @@ struct NewMessageView: View {
     }
 
     private func threadFor(_ person: StaffMember) -> MessageThread {
-        if let existing = store.threads.first(where: { $0.participantName == person.name && !$0.isBroadcast }) {
+        if let existing = store.threads.first(where: {
+            $0.participantName == person.name && !$0.isBroadcast
+        }) {
             return existing
         }
-        let newThread = MessageThread(
-            participantName: person.name,
-            lastMessage: "",
-            timestamp: "Now",
-            unread: false,
-            messages: []
-        )
-        store.threads.insert(newThread, at: 0)
-        return store.threads[0]
+        return MessageThread(targetEmployeeId: person.id,
+                             participantName: person.name,
+                             lastMessage: "", timestamp: "Now",
+                             unread: false, messages: [])
     }
 }
 

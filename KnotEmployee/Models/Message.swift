@@ -10,6 +10,8 @@ struct Message: Identifiable, Hashable {
 
 struct MessageThread: Identifiable, Hashable {
     let id = UUID()
+    var dbId: UUID? = nil
+    var targetEmployeeId: UUID? = nil
     var participantName: String
     var lastMessage: String
     var timestamp: String

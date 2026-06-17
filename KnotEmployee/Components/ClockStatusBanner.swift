@@ -84,9 +84,9 @@ struct ClockStatusBanner: View {
 
     private func primaryAction() {
         switch store.clockState {
-        case .out: store.clockState = .clockedIn; store.clockInAt = Date()
-        case .clockedIn: store.clockState = .out; store.clockInAt = nil
-        case .onBreak: store.clockState = .clockedIn
+        case .out:      store.clockIn()
+        case .clockedIn: store.clockOut()
+        case .onBreak:  store.clockState = .clockedIn
         }
     }
 }

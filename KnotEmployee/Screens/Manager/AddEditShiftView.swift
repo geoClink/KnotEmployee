@@ -7,6 +7,7 @@ struct AddEditShiftView: View {
 
     let rowIndex: Int
     let dayIndex: Int
+    let weekStart: Date
 
     @State private var selectedStaffName: String = ""
     @State private var startTime = Date()
@@ -149,21 +150,30 @@ struct AddEditShiftView: View {
     }
 
     private func save() {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "h"
-        let cellText = "\(fmt.string(from: startTime))–\(fmt.string(from: endTime))"
-        store.weekGrid[rowIndex].cells[dayIndex] = cellText
+        let fmt = DateFormatter(); fmt.dateFormat = "h"
+        store.weekGrid[rowIndex].cells[dayIndex] = "\(fmt.string(from: startTime))–\(fmt.string(from: endTime))"
+        if let emp = store.staff.first(where: { $0.name == store.weekGrid[rowIndex].name }) {
+            Task { await store.upsertShift(employeeId: emp.id, dayIndex: dayIndex,
+                                           weekStart: weekStart, start: startTime,
+                                           end: endTime, role: role, note: note) }
+        }
         dismiss()
     }
 
     private func remove() {
         store.weekGrid[rowIndex].cells[dayIndex] = nil
+        if let emp = store.staff.first(where: { $0.name == store.weekGrid[rowIndex].name }) {
+            let cal = Calendar.current
+            let shiftDate = cal.date(byAdding: .day, value: dayIndex, to: weekStart)!
+            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+            Task { await store.removeShift(employeeId: emp.id, shiftDate: df.string(from: shiftDate)) }
+        }
         dismiss()
     }
 }
 
 #Preview {
-    AddEditShiftView(rowIndex: 0, dayIndex: 0)
+    AddEditShiftView(rowIndex: 0, dayIndex: 0, weekStart: Date())
         .environment(\.knotTheme, BakeryCoTheme())
         .environment(AppStore.sample)
 }

@@ -102,13 +102,42 @@ struct PlaceholderView: View {
 }
 
 struct RootGate: View {
+    @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
     var body: some View {
-        if store.isAuthenticated {
-            RootView()
-        } else {
-            LoginView()
+        Group {
+            if store.isResettingPassword {
+                ResetPasswordView()
+            } else if store.isAuthenticated && store.isLoading {
+                loadingScreen
+            } else if store.isAuthenticated {
+                RootView()
+            } else {
+                LoginView()
+            }
         }
+        .alert("Something went wrong", isPresented: Binding(
+            get: { store.errorMessage != nil },
+            set: { if !$0 { store.errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { store.errorMessage = nil }
+        } message: {
+            Text(store.errorMessage ?? "")
+        }
+    }
+
+    private var loadingScreen: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .progressViewStyle(.circular)
+                .tint(theme.ink)
+                .scaleEffect(1.2)
+            Text("Loading…")
+                .font(theme.body(14))
+                .foregroundStyle(theme.inkMuted)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(theme.cream.ignoresSafeArea())
     }
 }
 
