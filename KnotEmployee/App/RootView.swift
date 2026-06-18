@@ -88,21 +88,6 @@ struct StaffMoreView: View {
     }
 }
 
-struct PlaceholderView: View {
-    @Environment(\.knotTheme) private var theme
-    let title: String
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 8) {
-                Text(title).font(theme.display(28)).foregroundStyle(theme.ink)
-                Text("Coming soon").font(theme.body(14)).foregroundStyle(theme.inkMuted)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(theme.cream.ignoresSafeArea())
-            .navigationTitle(title)
-        }
-    }
-}
 
 struct RootGate: View {
     @Environment(\.knotTheme) private var theme

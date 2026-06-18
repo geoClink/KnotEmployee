@@ -70,17 +70,20 @@ struct SettingsView: View {
     }
 
     private var profileCard: some View {
-        HStack(spacing: 14) {
-            Avatar(name: store.currentUser.name, size: 54)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(store.currentUser.name).font(theme.display(20)).foregroundStyle(theme.ink)
-                Text("\(store.currentUser.jobTitle) · The Bakery Co.")
-                    .font(theme.body(13)).foregroundStyle(theme.inkMuted)
+        NavigationLink { AccountView() } label: {
+            HStack(spacing: 14) {
+                Avatar(name: store.currentUser.name, size: 54)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(store.currentUser.name).font(theme.display(20)).foregroundStyle(theme.ink)
+                    Text("\(store.currentUser.jobTitle) · The Bakery Co.")
+                        .font(theme.body(13)).foregroundStyle(theme.inkMuted)
+                }
+                Spacer()
+                IconView(icon: .chevronRight, size: 18, color: theme.inkFaint)
             }
-            Spacer()
-            IconView(icon: .chevronRight, size: 18, color: theme.inkFaint)
+            .knotCard(padding: 16)
         }
-        .knotCard(padding: 16)
+        .buttonStyle(.plain)
     }
 
     private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -217,7 +220,7 @@ struct ChangePINView: View {
                     Task {
                         await store.updatePassword(newPassword)
                         isLoading = false
-                        if store.errorMessage == nil {
+                        if store.authError == nil {
                             saved = true
                             newPassword = ""; confirmPassword = ""
                         }

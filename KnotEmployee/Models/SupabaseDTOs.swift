@@ -256,8 +256,9 @@ extension DBTimeOff {
             default:         return .pending
             }
         }()
-        return TimeOff(id: id, staffName: staffName, kind: timeOffKind,
-                       status: timeOffStatus, range: range, days: days, note: note)
+        return TimeOff(id: id, staffName: staffName, employeeId: employeeId,
+                       kind: timeOffKind, status: timeOffStatus, range: range,
+                       days: days, note: note, startDate: startDate, endDate: endDate)
     }
 }
 

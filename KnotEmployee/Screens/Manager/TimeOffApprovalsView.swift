@@ -4,6 +4,7 @@ struct TimeOffApprovalsView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
     @State private var processingIds = Set<UUID>()
+    @State private var conflicts: [UUID: Bool] = [:]
 
     private var pending: [TimeOff] { store.timeOff.filter { $0.status == .pending } }
 
@@ -22,6 +23,20 @@ struct TimeOffApprovalsView: View {
         }
         .background(theme.cream.ignoresSafeArea())
         .navigationTitle("Time off requests")
+        .task(id: pending.map(\.id)) {
+            await loadConflicts()
+        }
+    }
+
+    private func loadConflicts() async {
+        await withTaskGroup(of: (UUID, Bool).self) { group in
+            for request in pending {
+                group.addTask { (request.id, await store.hasShiftConflict(for: request)) }
+            }
+            for await (id, hasConflict) in group {
+                conflicts[id] = hasConflict
+            }
+        }
     }
 
     private func approvalCard(_ request: TimeOff) -> some View {
@@ -47,8 +62,7 @@ struct TimeOffApprovalsView: View {
                     .background(theme.cream, in: RoundedRectangle(cornerRadius: 8))
             }
 
-            // Conflict warning if request overlaps a scheduled shift
-            if hasConflict(request) {
+            if conflicts[request.id] == true {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 12)).foregroundStyle(theme.gold)
@@ -95,11 +109,6 @@ struct TimeOffApprovalsView: View {
                 .multilineTextAlignment(.center).frame(maxWidth: 240)
         }
         .frame(maxWidth: .infinity).padding(.top, 60)
-    }
-
-    private func hasConflict(_ request: TimeOff) -> Bool {
-        // Simple conflict check: if any shift falls on the request range
-        store.shift.contains { $0.date.contains(request.range.prefix(6)) }
     }
 
     private func approve(_ request: TimeOff) {

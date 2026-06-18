@@ -41,9 +41,6 @@ struct LaborReportView: View {
         .navigationTitle("Labor report")
         .task { await store.fetchLaborReport() }
         .refreshable { await store.fetchLaborReport() }
-        .sheet(isPresented: $showingShare) {
-            if let url = csvURL { ShareSheet(url: url) }
-        }
     }
 
     private var summaryTiles: some View {
@@ -101,10 +98,9 @@ struct LaborReportView: View {
         }
     }
 
-    @State private var showingShare = false
-    @State private var csvURL: URL? = nil
-
-    private var csvContent: String {
+    private var exportFileURL: URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LaborReport.csv")
         let df = DateFormatter(); df.dateFormat = "MMM d yyyy"
         var lines = ["KnotEmployee Labor Report — Week of \(df.string(from: Date()))"]
         lines.append("Name,Job Title,Hours This Week,Rate ($/hr),Estimated Pay ($)")
@@ -115,17 +111,12 @@ struct LaborReportView: View {
                 + "\(String(format: "%.2f", person.hourlyRate)),"
                 + "\(String(format: "%.2f", pay))")
         }
-        return lines.joined(separator: "\n")
+        try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+        return url
     }
 
     private var exportButton: some View {
-        Button {
-            let url = FileManager.default.temporaryDirectory
-                .appendingPathComponent("LaborReport.csv")
-            try? csvContent.write(to: url, atomically: true, encoding: .utf8)
-            csvURL = url
-            showingShare = true
-        } label: {
+        ShareLink(item: exportFileURL) {
             HStack(spacing: 6) {
                 IconView(icon: .download, size: 16, color: theme.ink)
                 Text("Export CSV").font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
@@ -134,17 +125,8 @@ struct LaborReportView: View {
             .background(theme.card, in: Capsule())
             .overlay(Capsule().strokeBorder(theme.line, lineWidth: 1))
         }
-        .buttonStyle(.plain)
         .accessibilityLabel("Export labor report as CSV")
     }
-}
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let url: URL
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: [url], applicationActivities: nil)
-    }
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {

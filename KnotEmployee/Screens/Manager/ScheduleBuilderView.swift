@@ -75,7 +75,7 @@ struct ScheduleBuilderView: View {
             Spacer()
             VStack(spacing: 1) {
                 Text(weekLabel).font(theme.bodyMedium(14)).foregroundStyle(theme.ink)
-                Text("\(store.weekGrid.count) staff · 2 gaps").font(theme.body(11)).foregroundStyle(theme.inkMuted)
+                Text("\(store.weekGrid.count) staff scheduled").font(theme.body(11)).foregroundStyle(theme.inkMuted)
             }
             Spacer()
             Button { weekOffset += 1 } label: {

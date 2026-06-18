@@ -43,10 +43,11 @@ struct TimeOffView: View {
     }
 
     private var balancePills: some View {
-        HStack(spacing: 8) {
-            balancePill("PTO", "5 days")
-            balancePill("Sick", "3 days")
-            balancePill("Personal", "2 days")
+        let pto = store.currentUser.ptoDaysRemaining
+        return HStack(spacing: 8) {
+            balancePill("PTO", pto == 1 ? "1 day" : "\(Int(pto)) days")
+            balancePill("Sick", "—")
+            balancePill("Personal", "—")
         }
     }
 

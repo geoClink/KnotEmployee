@@ -795,6 +795,19 @@ struct ScheduleTemplate: Identifiable {
         } catch { errorMessage = error.localizedDescription }
     }
 
+    func hasShiftConflict(for request: TimeOff) async -> Bool {
+        guard let employeeId = request.employeeId,
+              !request.startDate.isEmpty, !request.endDate.isEmpty else { return false }
+        struct Row: Decodable { let id: UUID }
+        let rows: [Row] = (try? await supabase.from("kn_shifts")
+            .select("id")
+            .eq("employee_id", value: employeeId.uuidString)
+            .gte("shift_date", value: request.startDate)
+            .lte("shift_date", value: request.endDate)
+            .execute().value) ?? []
+        return !rows.isEmpty
+    }
+
     func markNotificationRead(id: UUID) {
         if let i = notifications.firstIndex(where: { $0.id == id }) { notifications[i].isRead = true }
         Task {
@@ -1055,7 +1068,7 @@ struct ScheduleTemplate: Identifiable {
 
         let cal = Calendar.current
         let dayNames = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-        var costByDay: [Int: Double] = [:]
+        var scheduledCostByDay: [Int: Double] = [:]
         var hoursByEmp: [UUID: Double] = [:]
 
         for s in shifts {
@@ -1064,14 +1077,9 @@ struct ScheduleTemplate: Identifiable {
             if let date = df.date(from: s.shiftDate) {
                 let weekday = cal.component(.weekday, from: date)
                 let dayIdx = (weekday + 5) % 7
-                costByDay[dayIdx, default: 0] += hours * rate
+                scheduledCostByDay[dayIdx, default: 0] += hours * rate
             }
             hoursByEmp[s.employeeId, default: 0] += hours
-        }
-
-        laborReport = dayNames.enumerated().map { idx, name in
-            let actual = costByDay[idx] ?? 0
-            return LaborDay(day: name, scheduled: actual, actual: actual, budget: actual * 1.15)
         }
 
         for i in staff.indices {
@@ -1090,10 +1098,13 @@ struct ScheduleTemplate: Identifiable {
             .lte("created_at", value: df.string(from: weekEnd) + "T23:59:59")
             .order("created_at", ascending: true)
             .execute().value as [ActualClockRow]) ?? []
+
         var clockInByEmp: [UUID: Date] = [:]
         var breakStartByEmp: [UUID: Date] = [:]
         var breakDurByEmp: [UUID: TimeInterval] = [:]
         var actualHrs: [UUID: Double] = [:]
+        var actualCostByDay: [Int: Double] = [:]
+
         for e in clockRows {
             switch e.eventType {
             case "clock_in":
@@ -1108,14 +1119,25 @@ struct ScheduleTemplate: Identifiable {
             case "clock_out":
                 if let ci = clockInByEmp[e.employeeId] {
                     let worked = max(0, e.createdAt.timeIntervalSince(ci) - (breakDurByEmp[e.employeeId] ?? 0))
-                    actualHrs[e.employeeId, default: 0] += worked / 3600
+                    let workedHrs = worked / 3600
+                    actualHrs[e.employeeId, default: 0] += workedHrs
+                    let rate = staff.first(where: { $0.id == e.employeeId })?.hourlyRate ?? 0
+                    let weekday = cal.component(.weekday, from: e.createdAt)
+                    let dayIdx = (weekday + 5) % 7
+                    actualCostByDay[dayIdx, default: 0] += workedHrs * rate
                 }
                 clockInByEmp.removeValue(forKey: e.employeeId)
                 breakDurByEmp.removeValue(forKey: e.employeeId)
             default: break
             }
         }
+
         actualHoursByEmployee = actualHrs
+        laborReport = dayNames.enumerated().map { idx, name in
+            let scheduled = scheduledCostByDay[idx] ?? 0
+            let actual = actualCostByDay[idx] ?? 0
+            return LaborDay(day: name, scheduled: scheduled, actual: actual, budget: scheduled * 1.15)
+        }
     }
 
     func fetchWeekGrid(weekStart: Date) async {
