@@ -4,7 +4,7 @@ import SwiftUI
 enum KnotIcon: String {
     case home, calendar, message, clock, swap, bell, dollar, user, users
     case chart, gear, chevronRight, chevronLeft, plus, check, xmark
-    case search, download, send, lock, handoff, pause
+    case search, download, send, lock, handoff, pause, broadcast
 
     var systemName: String {
         switch self {
@@ -30,6 +30,7 @@ enum KnotIcon: String {
         case .lock: "lock"
         case .handoff: "arrow.up.forward.square"
         case .pause: "pause"
+        case .broadcast: "megaphone"
         }
     }
 }

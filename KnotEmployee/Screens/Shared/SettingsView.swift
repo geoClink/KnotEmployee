@@ -4,10 +4,10 @@ struct SettingsView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
 
-    @State private var notifShifts = true
-    @State private var notifSwaps = true
-    @State private var notifMessages = true
-    @State private var notifPay = false
+    @AppStorage("notifShifts") private var notifShifts = true
+    @AppStorage("notifSwaps") private var notifSwaps = true
+    @AppStorage("notifMessages") private var notifMessages = true
+    @AppStorage("notifPay") private var notifPay = false
     
     private var managerBinding: Binding<Bool> {
             Binding(
@@ -36,7 +36,7 @@ struct SettingsView: View {
                         NavigationLink { AccountView() } label: { navRowContent(.user, "Account") }
                             .buttonStyle(.plain)
                         divider
-                        NavigationLink { ChangePINView() } label: { navRowContent(.lock, "Change PIN") }
+                        NavigationLink { ChangePINView() } label: { navRowContent(.lock, "Change password") }
                             .buttonStyle(.plain)
                         divider
                         valueRow(.bell, "Version", "1.0.0 (Phase 0)")
@@ -184,39 +184,48 @@ struct AccountView: View {
 
 struct ChangePINView: View {
     @Environment(\.knotTheme) private var theme
-    @State private var currentPIN = ""
-    @State private var newPIN = ""
-    @State private var confirmPIN = ""
+    @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var newPassword = ""
+    @State private var confirmPassword = ""
     @State private var saved = false
+    @State private var isLoading = false
 
-    var canSave: Bool {
-        !currentPIN.isEmpty && newPIN.count == 4 && newPIN == confirmPIN
-    }
+    private var passwordsMatch: Bool { newPassword == confirmPassword }
+    private var canSave: Bool { newPassword.count >= 8 && passwordsMatch && !isLoading }
+    private var mismatch: Bool { !confirmPassword.isEmpty && !passwordsMatch }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                pinField("Current PIN", text: $currentPIN)
-                pinField("New PIN (4 digits)", text: $newPIN)
-                pinField("Confirm new PIN", text: $confirmPIN)
+                pinField("New password", text: $newPassword)
+                pinField("Confirm new password", text: $confirmPassword, isConfirm: true)
 
                 if saved {
                     HStack(spacing: 8) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(theme.green)
-                        Text("PIN updated successfully")
-                            .font(theme.body(14)).foregroundStyle(theme.green)
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(theme.green)
+                        Text("Password updated").font(theme.body(14)).foregroundStyle(theme.green)
                     }
                     .padding(.top, 4)
                 }
 
                 Button {
-                    saved = true
-                    currentPIN = ""; newPIN = ""; confirmPIN = ""
+                    isLoading = true
+                    Task {
+                        await store.updatePassword(newPassword)
+                        isLoading = false
+                        if store.errorMessage == nil {
+                            saved = true
+                            newPassword = ""; confirmPassword = ""
+                        }
+                    }
                 } label: {
-                    Text("Save new PIN").font(theme.bodyMedium(15)).foregroundStyle(theme.paper)
-                        .frame(maxWidth: .infinity).frame(height: 50)
-                        .background(canSave ? theme.ink : theme.inkFaint, in: Capsule())
+                    Group {
+                        if isLoading { ProgressView().tint(theme.paper) }
+                        else { Text("Update password").font(theme.bodyMedium(15)).foregroundStyle(theme.paper) }
+                    }
+                    .frame(maxWidth: .infinity).frame(height: 50)
+                    .background(canSave ? theme.ink : theme.inkFaint, in: Capsule())
                 }
                 .buttonStyle(.plain)
                 .disabled(!canSave)
@@ -225,19 +234,21 @@ struct ChangePINView: View {
             .padding(20)
         }
         .background(theme.cream.ignoresSafeArea())
-        .navigationTitle("Change PIN")
+        .navigationTitle("Change password")
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func pinField(_ label: String, text: Binding<String>) -> some View {
+    private func pinField(_ label: String, text: Binding<String>, isConfirm: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label.uppercased()).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                 .padding(.leading, 4)
             SecureField(label, text: text)
-                .keyboardType(.numberPad)
                 .font(.system(size: 15)).padding(14)
                 .background(theme.card, in: RoundedRectangle(cornerRadius: theme.rCard))
-                .overlay(RoundedRectangle(cornerRadius: theme.rCard).strokeBorder(theme.line, lineWidth: 1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: theme.rCard)
+                        .strokeBorder(isConfirm && mismatch ? theme.roseDeep : theme.line, lineWidth: isConfirm && mismatch ? 2 : 1)
+                )
         }
     }
 }

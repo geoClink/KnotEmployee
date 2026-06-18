@@ -22,6 +22,19 @@ struct ManagerMessagesView: View {
             VStack(spacing: 0) {
                 filterBar
                 ScrollView {
+                    if filter == .broadcast {
+                        Button { showBroadcast = true } label: {
+                            HStack(spacing: 8) {
+                                IconView(icon: .broadcast, size: 16, color: theme.paper)
+                                Text("Send team message").font(theme.bodyMedium(14)).foregroundStyle(theme.paper)
+                            }
+                            .frame(maxWidth: .infinity).frame(height: 46)
+                            .background(theme.ink, in: RoundedRectangle(cornerRadius: theme.rCard))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 20).padding(.top, 12)
+                        .accessibilityLabel("Send a message to all staff")
+                    }
                     if filteredThreads.isEmpty {
                         emptyState
                     } else {
@@ -48,13 +61,10 @@ struct ManagerMessagesView: View {
             .task { await store.reloadThreads() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        if filter == .broadcast { showBroadcast = true }
-                        else { showCompose = true }
-                    } label: {
+                    Button { showCompose = true } label: {
                         IconView(icon: .plus, size: 22, color: theme.rose)
                     }
-                    .accessibilityLabel(filter == .broadcast ? "New broadcast" : "New message")
+                    .accessibilityLabel("New message")
                 }
             }
             .sheet(isPresented: $showCompose) { NewMessageView() }

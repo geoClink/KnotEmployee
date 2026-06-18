@@ -76,6 +76,14 @@ struct ManagerAlert: Identifiable {
     var weekGrid: [ScheduleRow] = []
 
     var unreadNotificationCount: Int { notifications.filter { !$0.isRead }.count }
+    var unreadMessageCount: Int { threads.filter { $0.unread }.count }
+
+    func markThreadRead(dbId: UUID) {
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastSeen_\(dbId.uuidString)")
+        if let i = threads.firstIndex(where: { $0.dbId == dbId }) {
+            threads[i].unread = false
+        }
+    }
 
     // MARK: - Init (used by SampleData / previews)
     init(currentUser: StaffMember, staff: [StaffMember], shift: [Shift],
@@ -208,6 +216,7 @@ struct ManagerAlert: Identifiable {
         swaps = sw; timeOff = to; notifications = no
 
         if let t = try? await fetchThreads() { threads = t }
+        await computeClockStatuses()
     }
 
     // MARK: - Fetches
@@ -223,10 +232,16 @@ struct ManagerAlert: Identifiable {
     }
 
     private func fetchShifts() async throws -> [Shift] {
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        let today = df.string(from: Date())
+        let twoWeeksOut = df.string(from: Calendar.current.date(byAdding: .day, value: 14, to: Date())!)
         let rows: [DBShift] = try await supabase
             .from("kn_shifts")
             .select()
             .eq("employee_id", value: currentUser.id.uuidString)
+            .gte("shift_date", value: today)
+            .lte("shift_date", value: twoWeeksOut)
+            .order("shift_date", ascending: true)
             .execute()
             .value
         return rows.map(\.toShift)
@@ -332,10 +347,12 @@ struct ManagerAlert: Identifiable {
             }
             let lastMsg = threadMessages.last
             let ts = lastMsg.map { fmt.localizedString(for: $0.createdAt, relativeTo: Date()) } ?? ""
+            let lastSeen = UserDefaults.standard.double(forKey: "lastSeen_\(thread.id.uuidString)")
+            let isUnread = lastMsg.map { $0.senderId != currentUser.id && $0.createdAt.timeIntervalSince1970 > lastSeen } ?? false
             return MessageThread(dbId: thread.id,
                                  participantName: participantName,
                                  lastMessage: messages.last?.text ?? "",
-                                 timestamp: ts, unread: false,
+                                 timestamp: ts, unread: isUnread,
                                  messages: messages,
                                  isBroadcast: thread.isBroadcast,
                                  broadcastRecipientCount: thread.broadcastRecipientCount)
@@ -471,6 +488,86 @@ struct ManagerAlert: Identifiable {
 
     func reloadThreads() async {
         if let t = try? await fetchThreads() { threads = t }
+    }
+
+    func reloadNotifications() async {
+        if let fresh = try? await fetchNotifications() { notifications = fresh }
+    }
+
+    func fetchShiftsForWeek(weekStart: Date) async -> [Shift] {
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        let end = Calendar.current.date(byAdding: .day, value: 6, to: weekStart)!
+        let rows = (try? await supabase.from("kn_shifts").select()
+            .eq("employee_id", value: currentUser.id.uuidString)
+            .gte("shift_date", value: df.string(from: weekStart))
+            .lte("shift_date", value: df.string(from: end))
+            .order("shift_date", ascending: true)
+            .execute().value as [DBShift]) ?? []
+        return rows.map(\.toShift)
+    }
+
+    func fetchShiftsCountThisWeek(employeeId: UUID) async -> Int {
+        let (weekStart, weekEnd) = currentISOWeekBounds()
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        let rows = (try? await supabase.from("kn_shifts")
+            .select("id")
+            .eq("employee_id", value: employeeId.uuidString)
+            .gte("shift_date", value: df.string(from: weekStart))
+            .lte("shift_date", value: df.string(from: weekEnd))
+            .execute().value as [DBShift]) ?? []
+        return rows.count
+    }
+
+    func fetchClockHistory(employeeId: UUID) async -> [(date: String, clockIn: String, clockOut: String, hours: String)] {
+        struct ClockRow: Decodable {
+            let eventType: String; let createdAt: Date
+            enum CodingKeys: String, CodingKey {
+                case eventType = "event_type"; case createdAt = "created_at"
+            }
+        }
+        let events = (try? await supabase.from("clock_events")
+            .select("event_type, created_at")
+            .eq("employee_id", value: employeeId.uuidString)
+            .order("created_at", ascending: true)
+            .limit(40)
+            .execute().value as [ClockRow]) ?? []
+        let dateFmt = DateFormatter(); dateFmt.dateFormat = "EEE MMM d"
+        let timeFmt = DateFormatter(); timeFmt.dateFormat = "h:mm a"
+        var result: [(date: String, clockIn: String, clockOut: String, hours: String)] = []
+        var pendingIn: Date? = nil
+        for event in events {
+            if event.eventType == "clock_in" { pendingIn = event.createdAt }
+            else if event.eventType == "clock_out", let start = pendingIn {
+                let hrs = event.createdAt.timeIntervalSince(start) / 3600
+                result.insert((date: dateFmt.string(from: start),
+                                clockIn: timeFmt.string(from: start),
+                                clockOut: timeFmt.string(from: event.createdAt),
+                                hours: String(format: "%.1f", hrs)), at: 0)
+                pendingIn = nil
+            }
+        }
+        return Array(result.prefix(7))
+    }
+
+    private func computeClockStatuses() async {
+        struct ClockRow: Decodable {
+            let employeeId: String; let eventType: String
+            enum CodingKeys: String, CodingKey {
+                case employeeId = "employee_id"; case eventType = "event_type"
+            }
+        }
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        let today = df.string(from: Date())
+        let events = (try? await supabase.from("clock_events")
+            .select("employee_id, event_type")
+            .gte("created_at", value: today + "T00:00:00Z")
+            .order("created_at", ascending: true)
+            .execute().value as [ClockRow]) ?? []
+        var lastEvent: [String: String] = [:]
+        for e in events { lastEvent[e.employeeId] = e.eventType }
+        for i in staff.indices {
+            staff[i].clockStatus = lastEvent[staff[i].id.uuidString] == "clock_in" ? .clockedIn : .out
+        }
     }
 
     func submitSwap(withEmployee: StaffMember) async {

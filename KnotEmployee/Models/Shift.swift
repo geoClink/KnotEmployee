@@ -12,7 +12,12 @@ struct Shift: Identifiable, Hashable {
     var note: String? = nil
     var breakLabel: String? = nil
     var status: Status = .scheduled
-    var timeRange: String { "\(start) - \(end)" }
+    var timeRange: String {
+        let inf = DateFormatter(); inf.dateFormat = "HH:mm"
+        let outf = DateFormatter(); outf.dateFormat = "h:mm a"
+        let fmt = { (s: String) -> String in inf.date(from: s).map { outf.string(from: $0) } ?? s }
+        return "\(fmt(start)) – \(fmt(end))"
+    }
 
     init(id: UUID = UUID(), day: String, date: String, shiftDate: String = "",
          start: String, end: String, role: String, note: String? = nil,

@@ -21,6 +21,7 @@ struct MessageThreadView: View {
         .background(theme.cream.ignoresSafeArea())
         .navigationTitle(thread.participantName)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { if let id = thread.dbId { store.markThreadRead(dbId: id) } }
     }
 
     private var inputBar: some View {

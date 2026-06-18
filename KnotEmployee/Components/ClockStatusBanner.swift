@@ -51,10 +51,21 @@ struct ClockStatusBanner: View {
         case .onBreak: "On break"
         }
     }
+    private func formatTime(_ hhmm: String) -> String {
+        let inf = DateFormatter(); inf.dateFormat = "HH:mm"
+        let outf = DateFormatter(); outf.dateFormat = "h:mm a"
+        return inf.date(from: hhmm).map { outf.string(from: $0) } ?? hhmm
+    }
+
     private func subtitle(now: Date) -> String {
         switch store.clockState {
-        case .out: 
-            return "Your shift starts at 6:00 AM"
+        case .out:
+            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+            let today = df.string(from: now)
+            if let todayShift = store.shift.first(where: { $0.shiftDate == today }) {
+                return "Your shift starts at \(formatTime(todayShift.start))"
+            }
+            return "No shift scheduled today"
         case .clockedIn:
             if let start = store.clockInAt {
                 let mins = max(0, Int(now.timeIntervalSince(start) / 60))

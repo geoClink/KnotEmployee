@@ -20,6 +20,7 @@ struct StaffTabView: View {
             HomeView().tabItem { Label("Home", systemImage: "house") }
             ScheduleView().tabItem { Label("Schedule", systemImage: "calendar") }
             MessagesView().tabItem { Label("Messages", systemImage: "bubble.left") }
+                .badge(store.unreadMessageCount)
             NavigationStack { NotificationsView() }
                 .tabItem { Label("Alerts", systemImage: "bell") }
                 .badge(store.unreadNotificationCount)
@@ -31,6 +32,7 @@ struct StaffTabView: View {
 
 struct ManagerTabView: View {
     @Environment(\.knotTheme) private var theme
+    @Environment(AppStore.self) private var store
     var body: some View {
         TabView {
             ManagerHomeView().tabItem { Label("Home", systemImage: "house") }
@@ -40,6 +42,7 @@ struct ManagerTabView: View {
                 .tabItem { Label("Team", systemImage: "person.2") }
             ManagerMessagesView()
                 .tabItem { Label("Messages", systemImage: "bubble.left") }
+                .badge(store.unreadMessageCount)
             SettingsView().tabItem { Label("More", systemImage: "ellipsis") }
         }
         .tint(theme.rose)

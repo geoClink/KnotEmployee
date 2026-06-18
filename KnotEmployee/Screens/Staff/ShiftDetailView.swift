@@ -12,9 +12,9 @@ struct ShiftDetailView: View {
             VStack(spacing: 12) {
                 header
                 infoTile(icon: .user, label: "Role", value: shift.role)
-                infoTile(icon: .clock, label: "Duration", value: "6 hours")
+                infoTile(icon: .clock, label: "Duration", value: durationText)
                 if let brk = shift.breakLabel {
-                    infoTile(icon: .pause, label: "Break", value: brk, trailing: "~9:00 AM")
+                    infoTile(icon: .pause, label: "Break", value: brk)
                 }
                 if let note = shift.note, !note.isEmpty { noteCard(note) }
                 actions
@@ -84,6 +84,14 @@ struct ShiftDetailView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
+    }
+
+    private var durationText: String {
+        let fmt = DateFormatter(); fmt.dateFormat = "HH:mm"
+        guard let s = fmt.date(from: shift.start), let e = fmt.date(from: shift.end) else { return "—" }
+        let diff = e > s ? e.timeIntervalSince(s) : e.timeIntervalSince(s) + 86400
+        let hrs = Int(diff / 3600); let mins = Int((diff.truncatingRemainder(dividingBy: 3600)) / 60)
+        return mins > 0 ? "\(hrs) hr \(mins) min" : "\(hrs) hours"
     }
 
     private var dayFull: String {

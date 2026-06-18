@@ -33,12 +33,19 @@ struct NotificationsView: View {
         }
         .background(theme.cream.ignoresSafeArea())
         .navigationTitle("Notifications")
+        .task { await store.reloadNotifications() }
+        .refreshable { await store.reloadNotifications() }
     }
 
     private func notifGroup(_ items: [AppNotification]) -> some View {
         VStack(spacing: 0) {
             ForEach(items) { notif in
-                NotificationRow(notification: notif)
+                Button {
+                    if !notif.isRead { store.markNotificationRead(id: notif.id) }
+                } label: {
+                    NotificationRow(notification: notif)
+                }
+                .buttonStyle(.plain)
                 if notif.id != items.last?.id {
                     Rectangle().fill(theme.lineSoft).frame(height: 1)
                         .padding(.leading, 52)

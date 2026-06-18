@@ -5,10 +5,15 @@ struct ScheduleView: View {
     @Environment(AppStore.self) private var store
     @State private var showNewSwap = false
     @State private var showNewTimeOff = false
-
     @State private var weekOffset = 0
+    @State private var weekShifts: [Shift] = []
 
-    private let baseMonday: Date = Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 9))!
+    private var baseMonday: Date {
+        var cal = Calendar.current
+        cal.firstWeekday = 2
+        let comps = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())
+        return cal.date(from: comps) ?? Date()
+    }
 
     private var weekStart: Date {
         Calendar.current.date(byAdding: .day, value: weekOffset * 7, to: baseMonday)!
@@ -28,7 +33,7 @@ struct ScheduleView: View {
             let date = cal.date(byAdding: .day, value: i, to: weekStart)!
             let num = cal.component(.day, from: date)
             return WeekDay(label: dayNames[i], date: String(num),
-                           shift: weekOffset == 0 ? store.shift.first { $0.day == dayNames[i] } : nil)
+                           shift: weekShifts.first { $0.day == dayNames[i] })
         }
     }
 
@@ -49,6 +54,9 @@ struct ScheduleView: View {
             .sheet(isPresented: $showNewSwap) { NewSwapView() }
             .sheet(isPresented: $showNewTimeOff) { NewTimeOffView() }
             .navigationTitle("Schedule")
+            .task(id: weekOffset) {
+                weekShifts = await store.fetchShiftsForWeek(weekStart: weekStart)
+            }
         }
     }
 
@@ -74,20 +82,14 @@ struct ScheduleView: View {
     }
 
     private func giveUp(_ shift: Shift) {
-        if let i = store.shift.firstIndex(where: { $0.id == shift.id }) {
-            store.shift[i].status = .offered
-        }
-        store.openShifts.append(
-            OpenShift(offeredBy: store.currentUser.name, day: shift.day, date: shift.date,
-                      start: shift.start, end: shift.end, role: shift.role, status: .open)
-        )
+        Task { await store.offerShift(shift) }
     }
 
     private var summary: some View {
         HStack {
             Text("Scheduled this week").font(theme.body(14)).foregroundStyle(theme.inkSoft)
             Spacer()
-            Text("\(store.currentUser.hoursThisWeek, specifier: "%.1f") hrs")
+            Text("\(weekShifts.count) shift\(weekShifts.count == 1 ? "" : "s")")
                 .font(theme.mono(14)).foregroundStyle(theme.ink)
         }
         .padding(.horizontal, 16).padding(.vertical, 14)
