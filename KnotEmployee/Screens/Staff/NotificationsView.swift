@@ -5,10 +5,10 @@ struct NotificationsView: View {
     @Environment(AppStore.self) private var store
 
     private var todayNotifs: [AppNotification] {
-        store.notifications.filter { $0.timestamp == "Just now" || $0.timestamp.hasSuffix("ago") }
+        store.notifications.filter { Calendar.current.isDateInToday($0.createdAt) }
     }
     private var earlierNotifs: [AppNotification] {
-        store.notifications.filter { !($0.timestamp == "Just now" || $0.timestamp.hasSuffix("ago")) }
+        store.notifications.filter { !Calendar.current.isDateInToday($0.createdAt) }
     }
 
     var body: some View {

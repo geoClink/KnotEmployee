@@ -152,8 +152,8 @@ struct AddEditShiftView: View {
     private func save() {
         let fmt = DateFormatter(); fmt.dateFormat = "h"
         store.weekGrid[rowIndex].cells[dayIndex] = "\(fmt.string(from: startTime))–\(fmt.string(from: endTime))"
-        if let emp = store.staff.first(where: { $0.name == store.weekGrid[rowIndex].name }) {
-            Task { await store.upsertShift(employeeId: emp.id, dayIndex: dayIndex,
+        if let empId = store.weekGrid[rowIndex].employeeId {
+            Task { await store.upsertShift(employeeId: empId, dayIndex: dayIndex,
                                            weekStart: weekStart, start: startTime,
                                            end: endTime, role: role, note: note) }
         }
@@ -162,11 +162,11 @@ struct AddEditShiftView: View {
 
     private func remove() {
         store.weekGrid[rowIndex].cells[dayIndex] = nil
-        if let emp = store.staff.first(where: { $0.name == store.weekGrid[rowIndex].name }) {
+        if let empId = store.weekGrid[rowIndex].employeeId {
             let cal = Calendar.current
             let shiftDate = cal.date(byAdding: .day, value: dayIndex, to: weekStart)!
             let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
-            Task { await store.removeShift(employeeId: emp.id, shiftDate: df.string(from: shiftDate)) }
+            Task { await store.removeShift(employeeId: empId, shiftDate: df.string(from: shiftDate)) }
         }
         dismiss()
     }

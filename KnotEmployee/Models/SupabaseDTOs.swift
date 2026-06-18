@@ -70,11 +70,13 @@ struct DBSwap: Decodable {
     let fromEmployeeId: UUID
     let withEmployeeId: UUID
     let status: String
+    let fromShiftId: UUID?
 
     enum CodingKeys: String, CodingKey {
         case id, status
         case fromEmployeeId = "from_employee_id"
         case withEmployeeId = "with_employee_id"
+        case fromShiftId    = "from_shift_id"
     }
 }
 
@@ -228,7 +230,9 @@ extension DBSwap {
             fromName: fromName,
             direction: direction,
             status: Swap.Status(rawValue: status) ?? .pending,
-            withName: withName
+            withName: withName,
+            fromShiftId: fromShiftId,
+            withEmployeeId: withEmployeeId
         )
     }
 }
@@ -277,6 +281,6 @@ extension DBNotification {
         fmt.unitsStyle = .abbreviated
         let ts = fmt.localizedString(for: createdAt, relativeTo: Date())
         return AppNotification(id: id, icon: icon, title: title, body: body,
-                               timestamp: ts, isRead: isRead, category: cat)
+                               timestamp: ts, isRead: isRead, category: cat, createdAt: createdAt)
     }
 }

@@ -8,7 +8,7 @@ struct NewBroadcastView: View {
     @State private var messageText = ""
 
     private var recipientCount: Int {
-        store.staff.filter { $0.role == .staff }.count
+        store.staff.count
     }
 
     var body: some View {

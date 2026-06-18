@@ -126,23 +126,24 @@ struct NewSwapView: View {
     }
 
     private var submitButton: some View {
-        Button(action: submit) {
+        let ready = selectedPerson != nil && selectedShift != nil
+        return Button(action: submit) {
             HStack(spacing: 6) {
                 IconView(icon: .check, size: 16, color: theme.paper)
                 Text("Request swap").font(theme.bodyMedium(15)).foregroundStyle(theme.paper)
             }
             .frame(maxWidth: .infinity).frame(height: 50)
-            .background(selectedPerson != nil ? theme.ink : theme.inkFaint, in: Capsule())
+            .background(ready ? theme.ink : theme.inkFaint, in: Capsule())
         }
         .buttonStyle(.plain)
-        .disabled(selectedPerson == nil)
+        .disabled(!ready)
         .accessibilityLabel("Request swap")
     }
 
     private func submit() {
         guard let person = selectedPerson else { return }
         Task {
-            await store.submitSwap(withEmployee: person)
+            await store.submitSwap(withEmployee: person, shift: selectedShift)
             dismiss()
         }
     }

@@ -704,6 +704,10 @@ struct ScheduleTemplate: Identifiable {
                              shiftDate: shift.shiftDate, startTime: shift.start,
                              endTime: shift.end, role: shift.role, status: "open")
             try await supabase.from("kn_open_shifts").insert(row).execute()
+            try await supabase.from("kn_shifts")
+                .update(["status": "offered"])
+                .eq("id", value: shift.id.uuidString)
+                .execute()
             if let fresh = try? await fetchOpenShifts() { openShifts = fresh }
         } catch { errorMessage = error.localizedDescription }
     }
@@ -753,10 +757,17 @@ struct ScheduleTemplate: Identifiable {
     }
 
     func approveSwap(id: UUID) async {
+        let swap = swaps.first(where: { $0.id == id })
         if let i = swaps.firstIndex(where: { $0.id == id }) { swaps[i].status = .approved }
         do {
             try await supabase.from("kn_swaps")
                 .update(["status": "approved"]).eq("id", value: id.uuidString).execute()
+            if let shiftId = swap?.fromShiftId, let newOwnerId = swap?.withEmployeeId {
+                try await supabase.from("kn_shifts")
+                    .update(["employee_id": newOwnerId.uuidString])
+                    .eq("id", value: shiftId.uuidString)
+                    .execute()
+            }
         } catch { errorMessage = error.localizedDescription }
     }
 
@@ -904,12 +915,14 @@ struct ScheduleTemplate: Identifiable {
         }
     }
 
-    func submitSwap(withEmployee: StaffMember) async {
+    func submitSwap(withEmployee: StaffMember, shift: Shift?) async {
         struct Insert: Encodable {
             let fromEmployeeId, withEmployeeId, status: String
+            let fromShiftId: String?
             enum CodingKeys: String, CodingKey {
                 case fromEmployeeId = "from_employee_id"
                 case withEmployeeId = "with_employee_id"
+                case fromShiftId    = "from_shift_id"
                 case status
             }
         }
@@ -917,7 +930,8 @@ struct ScheduleTemplate: Identifiable {
             try await supabase.from("kn_swaps")
                 .insert(Insert(fromEmployeeId: currentUser.id.uuidString,
                                withEmployeeId: withEmployee.id.uuidString,
-                               status: "pending"))
+                               status: "pending",
+                               fromShiftId: shift?.id.uuidString))
                 .execute()
             if let fresh = try? await fetchSwaps() { swaps = fresh }
         } catch { errorMessage = error.localizedDescription }
