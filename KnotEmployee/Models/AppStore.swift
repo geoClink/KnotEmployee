@@ -1,6 +1,7 @@
 import Observation
 import Foundation
 import Supabase
+import UserNotifications
 
 enum ClockState { case out, clockedIn, onBreak }
 
@@ -246,6 +247,35 @@ struct ScheduleTemplate: Identifiable {
         }
     }
 
+    func scheduleShiftReminders() {
+        let center = UNUserNotificationCenter.current()
+        let enabled = UserDefaults.standard.object(forKey: "notifShifts") as? Bool ?? true
+        let existingIds = shift.map { "shift-reminder-\($0.id)" }
+        center.removePendingNotificationRequests(withIdentifiers: existingIds)
+        guard enabled else { return }
+
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        for s in shift {
+            guard let shiftDay = df.date(from: s.shiftDate) else { continue }
+            var comps = Calendar.current.dateComponents([.year, .month, .day], from: shiftDay)
+            comps.hour = 8; comps.minute = 0
+            guard let fireAt = Calendar.current.date(from: comps),
+                  fireAt > Date() else { continue }
+            let reminderDate = Calendar.current.date(byAdding: .day, value: -1, to: fireAt) ?? fireAt
+            guard reminderDate > Date() else { continue }
+
+            let content = UNMutableNotificationContent()
+            content.title = "Shift tomorrow"
+            content.body = "\(s.role) · \(s.timeRange)"
+            content.sound = .default
+
+            let triggerComps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: reminderDate)
+            let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComps, repeats: false)
+            let request = UNNotificationRequest(identifier: "shift-reminder-\(s.id)", content: content, trigger: trigger)
+            center.add(request)
+        }
+    }
+
     func registerDeviceToken(_ token: String) {
         Task {
             try? await supabase.from("device_tokens")
@@ -303,6 +333,7 @@ struct ScheduleTemplate: Identifiable {
         await fetchAvailability()
         await fetchAllStaffAvailability()
         subscribeToMessages()
+        scheduleShiftReminders()
     }
 
     private func restoreClockState() async {
@@ -1098,6 +1129,12 @@ struct ScheduleTemplate: Identifiable {
 
         for i in staff.indices {
             staff[i].hoursThisWeek = hoursByEmp[staff[i].id] ?? 0
+        }
+        for (empId, hours) in hoursByEmp {
+            try? await supabase.from("employees")
+                .update(["hours_this_week": hours])
+                .eq("id", value: empId.uuidString)
+                .execute()
         }
 
         struct ActualClockRow: Decodable {

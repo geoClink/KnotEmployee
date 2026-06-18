@@ -10,8 +10,10 @@ struct NewTimeOffView: View {
     @State private var endDate = Date()
     @State private var note = ""
 
+    private var datesValid: Bool { endDate >= startDate }
     private var totalDays: Int {
-        max(1, Calendar.current.dateComponents([.day], from: startDate, to: endDate).day! + 1)
+        guard datesValid else { return 0 }
+        return max(1, Calendar.current.dateComponents([.day], from: startDate, to: endDate).day! + 1)
     }
 
     var body: some View {
@@ -66,6 +68,16 @@ struct NewTimeOffView: View {
         VStack(spacing: 10) {
             dateRow("Start date", $startDate)
             dateRow("End date", $endDate)
+            if !datesValid {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 12)).foregroundStyle(theme.roseDeep)
+                    Text("End date must be on or after start date")
+                        .font(theme.body(12)).foregroundStyle(theme.roseDeep)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 4)
+            }
         }
     }
 
@@ -126,9 +138,10 @@ struct NewTimeOffView: View {
                 Text("Submit request").font(theme.bodyMedium(15)).foregroundStyle(theme.paper)
             }
             .frame(maxWidth: .infinity).frame(height: 50)
-            .background(theme.ink, in: Capsule())
+            .background(datesValid ? theme.ink : theme.inkFaint, in: Capsule())
         }
         .buttonStyle(.plain)
+        .disabled(!datesValid)
         .accessibilityLabel("Submit time off request")
     }
 

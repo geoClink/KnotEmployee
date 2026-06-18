@@ -14,8 +14,13 @@ struct AddEmployeeView: View {
     @State private var showConfirmAlert = false
     @State private var isLoading = false
 
+    private var emailIsValid: Bool {
+        let parts = email.split(separator: "@")
+        return parts.count == 2 && parts[1].contains(".")
+    }
     private var canSubmit: Bool {
-        !name.isEmpty && !jobTitle.isEmpty && !email.isEmpty &&
+        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !jobTitle.isEmpty && emailIsValid &&
         password.count >= 8 && hourlyRate != nil && !isLoading
     }
     private var hourlyRate: Double? { Double(hourlyRateText) }
@@ -27,7 +32,7 @@ struct AddEmployeeView: View {
                     infoCard
                     field("Full name", text: $name, placeholder: "e.g. Mia Torres")
                     field("Job title", text: $jobTitle, placeholder: "e.g. Baker, Cashier")
-                    field("Email", text: $email, placeholder: "employee@email.com", keyboard: .emailAddress)
+                    emailField
                     passwordField
                     rateField
                     managerToggle
@@ -77,6 +82,26 @@ struct AddEmployeeView: View {
                 .padding(14)
                 .background(theme.card, in: RoundedRectangle(cornerRadius: theme.rCard))
                 .overlay(RoundedRectangle(cornerRadius: theme.rCard).strokeBorder(theme.line, lineWidth: 1))
+        }
+    }
+
+    private var emailField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("EMAIL").font(theme.mono(11)).foregroundStyle(theme.inkFaint)
+                .padding(.leading, 4)
+            TextField("employee@email.com", text: $email)
+                .keyboardType(.emailAddress)
+                .autocapitalization(.none)
+                .font(theme.body(15)).foregroundStyle(theme.ink)
+                .padding(14)
+                .background(theme.card, in: RoundedRectangle(cornerRadius: theme.rCard))
+                .overlay(RoundedRectangle(cornerRadius: theme.rCard)
+                    .strokeBorder(!email.isEmpty && !emailIsValid ? theme.roseDeep : theme.line,
+                                  lineWidth: !email.isEmpty && !emailIsValid ? 2 : 1))
+            if !email.isEmpty && !emailIsValid {
+                Text("Enter a valid email address")
+                    .font(theme.body(12)).foregroundStyle(theme.roseDeep).padding(.leading, 4)
+            }
         }
     }
 
