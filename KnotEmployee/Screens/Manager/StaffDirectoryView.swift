@@ -4,6 +4,7 @@ struct StaffDirectoryView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
     @State private var query = ""
+    @State private var showAddEmployee = false
 
     private var filtered: [StaffMember] {
         query.isEmpty ? store.staff
@@ -45,6 +46,19 @@ struct StaffDirectoryView: View {
             }
             .background(theme.cream.ignoresSafeArea())
             .navigationTitle("Team")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showAddEmployee = true } label: {
+                        Image(systemName: "person.badge.plus")
+                            .font(.system(size: 17))
+                            .foregroundStyle(theme.ink)
+                    }
+                    .accessibilityLabel("Add employee")
+                }
+            }
+            .sheet(isPresented: $showAddEmployee) {
+                AddEmployeeView()
+            }
         }
     }
 }

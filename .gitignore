@@ -12,3 +12,4 @@ xcuserdata/
 # Swift Package Manager
 .swiftpm/
 .build/
+KnotEmployee/Config.swift

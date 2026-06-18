@@ -10,6 +10,7 @@ struct DBEmployee: Decodable {
     let hourlyRate: Double?
     let hoursThisWeek: Double?
     let userId: UUID?
+    let ptoDaysRemaining: Double?
 
     enum CodingKeys: String, CodingKey {
         case id, name, role
@@ -17,6 +18,7 @@ struct DBEmployee: Decodable {
         case hourlyRate       = "hourly_rate"
         case hoursThisWeek    = "hours_this_week"
         case userId           = "user_id"
+        case ptoDaysRemaining = "pto_days_remaining"
     }
 }
 
@@ -177,7 +179,8 @@ extension DBEmployee {
             hoursThisWeek: hoursThisWeek ?? 0,
             hourlyRate: hourlyRate ?? 0,
             clockStatus: .out,
-            userId: userId
+            userId: userId,
+            ptoDaysRemaining: ptoDaysRemaining ?? 10
         )
     }
 }

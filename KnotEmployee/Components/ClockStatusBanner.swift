@@ -32,7 +32,7 @@ struct ClockStatusBanner: View {
             }
 
             if store.clockState == .clockedIn {
-                Button { store.clockState = .onBreak } label: {
+                Button { store.startBreak() } label: {
                     Text("Take a break").font(theme.bodyMedium(13)).foregroundStyle(theme.paper)
                         .frame(maxWidth: .infinity).frame(height: 38)
                         .background(theme.paper.opacity(0.10), in: Capsule())
@@ -97,7 +97,7 @@ struct ClockStatusBanner: View {
         switch store.clockState {
         case .out:      store.clockIn()
         case .clockedIn: store.clockOut()
-        case .onBreak:  store.clockState = .clockedIn
+        case .onBreak:  store.endBreak()
         }
     }
 }

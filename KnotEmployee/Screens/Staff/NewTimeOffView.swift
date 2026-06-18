@@ -94,14 +94,29 @@ struct NewTimeOffView: View {
     }
 
     private var summaryCard: some View {
-        HStack {
-            Text("Total days").font(theme.body(14)).foregroundStyle(theme.inkSoft)
-            Spacer()
-            Text("\(totalDays)").font(theme.display(28)).foregroundStyle(theme.ink)
+        VStack(spacing: 10) {
+            HStack {
+                Text("Total days").font(theme.body(14)).foregroundStyle(theme.inkSoft)
+                Spacer()
+                Text("\(totalDays)").font(theme.display(28)).foregroundStyle(theme.ink)
+            }
+            if selectedKind == .pto {
+                Rectangle().fill(theme.line).frame(height: 1)
+                let remaining = store.currentUser.ptoDaysRemaining
+                let overBalance = Double(totalDays) > remaining
+                HStack {
+                    Text("PTO balance").font(theme.body(13)).foregroundStyle(theme.inkSoft)
+                    Spacer()
+                    Text(overBalance
+                         ? "Only \(String(format: "%.1f", remaining)) days available"
+                         : "\(String(format: "%.1f", remaining)) days remaining")
+                        .font(theme.bodyMedium(13))
+                        .foregroundStyle(overBalance ? theme.roseDeep : theme.green)
+                }
+            }
         }
         .padding(.horizontal, 16).padding(.vertical, 14)
         .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: theme.rCard))
-        .accessibilityElement(children: .combine)
     }
 
     private var submitButton: some View {

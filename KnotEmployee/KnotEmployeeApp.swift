@@ -1,14 +1,19 @@
-//
-//  KnotEmployeeApp.swift
-//  KnotEmployee
-//
-//  Created by George Clinkscales on 6/13/26.
-//
-
 import SwiftUI
+import UserNotifications
+
+class KnotAppDelegate: NSObject, UIApplicationDelegate {
+    var store: AppStore?
+
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        store?.registerDeviceToken(token)
+    }
+}
 
 @main
 struct KnotEmployeeApp: App {
+    @UIApplicationDelegateAdaptor(KnotAppDelegate.self) var appDelegate
     @State private var store = AppStore()
 
     init() {
@@ -32,7 +37,17 @@ struct KnotEmployeeApp: App {
                 .environment(\.knotTheme, BakeryCoTheme())
                 .environment(store)
                 .task { await store.restoreSession() }
+                .task { await requestNotificationPermission() }
                 .onOpenURL { url in Task { await store.handleDeepLink(url) } }
+                .onAppear { appDelegate.store = store }
+        }
+    }
+
+    private func requestNotificationPermission() async {
+        let granted = (try? await UNUserNotificationCenter.current()
+            .requestAuthorization(options: [.alert, .badge, .sound])) ?? false
+        if granted {
+            await MainActor.run { UIApplication.shared.registerForRemoteNotifications() }
         }
     }
 }

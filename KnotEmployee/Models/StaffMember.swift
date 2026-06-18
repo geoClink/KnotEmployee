@@ -10,15 +10,16 @@ struct StaffMember: Identifiable, Hashable {
     var hourlyRate: Double = 0
     var clockStatus: ClockState = .out
     var userId: UUID? = nil
+    var ptoDaysRemaining: Double = 10
 
     init(id: UUID = UUID(), name: String, jobTitle: String,
          role: Role = .staff, hoursThisWeek: Double = 0,
          hourlyRate: Double = 0, clockStatus: ClockState = .out,
-         userId: UUID? = nil) {
+         userId: UUID? = nil, ptoDaysRemaining: Double = 10) {
         self.id = id; self.name = name; self.jobTitle = jobTitle
         self.role = role; self.hoursThisWeek = hoursThisWeek
         self.hourlyRate = hourlyRate; self.clockStatus = clockStatus
-        self.userId = userId
+        self.userId = userId; self.ptoDaysRemaining = ptoDaysRemaining
     }
 
     static let placeholder = StaffMember(name: "", jobTitle: "")

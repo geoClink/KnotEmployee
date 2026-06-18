@@ -174,6 +174,54 @@ struct ManagerAlert: Identifiable {
         }
     }
 
+    // Creates the auth account + employees row, then signs out so manager can re-login
+    func addEmployee(name: String, jobTitle: String, email: String,
+                     password: String, hourlyRate: Double, isManager: Bool) async -> Bool {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let session = try await supabase.auth.signUp(email: email, password: password)
+            let newUserId = session.user.id
+            struct NewEmployee: Encodable {
+                let name, role: String
+                let permissionLevel: Int
+                let hourlyRate: Double
+                let active: Bool
+                let userId: UUID
+                enum CodingKeys: String, CodingKey {
+                    case name, role, active
+                    case permissionLevel = "permission_level"
+                    case hourlyRate = "hourly_rate"
+                    case userId = "user_id"
+                }
+            }
+            try await supabase.from("employees")
+                .insert(NewEmployee(name: name, role: jobTitle,
+                                    permissionLevel: isManager ? 2 : 1,
+                                    hourlyRate: hourlyRate, active: true, userId: newUserId))
+                .execute()
+            try? await supabase.auth.signOut()
+            isAuthenticated = false
+            currentUser = .placeholder
+            staff = []; shift = []; openShifts = []; swaps = []
+            timeOff = []; threads = []; notifications = []
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    func registerDeviceToken(_ token: String) {
+        Task {
+            try? await supabase.from("device_tokens")
+                .upsert(["employee_id": currentUser.id.uuidString,
+                         "token": token, "platform": "apns"],
+                        onConflict: "employee_id")
+                .execute()
+        }
+    }
+
     func restoreSession() async {
         isLoading = true
         defer { isLoading = false }
@@ -193,7 +241,7 @@ struct ManagerAlert: Identifiable {
     private func loadCurrentUser(userId: UUID) async throws {
         let employee: DBEmployee = try await supabase
             .from("employees")
-            .select("id, name, role, permission_level, hourly_rate, hours_this_week, user_id")
+            .select("id, name, role, permission_level, hourly_rate, hours_this_week, user_id, pto_days_remaining")
             .eq("user_id", value: userId.uuidString)
             .single()
             .execute()
@@ -224,7 +272,7 @@ struct ManagerAlert: Identifiable {
     private func fetchStaff() async throws -> [StaffMember] {
         let rows: [DBEmployee] = try await supabase
             .from("employees")
-            .select("id, name, role, permission_level, hourly_rate, hours_this_week, user_id")
+            .select("id, name, role, permission_level, hourly_rate, hours_this_week, user_id, pto_days_remaining")
             .eq("active", value: true)
             .execute()
             .value
@@ -377,6 +425,20 @@ struct ManagerAlert: Identifiable {
             .execute() }
     }
 
+    func startBreak() {
+        clockState = .onBreak
+        Task { try? await supabase.from("clock_events")
+            .insert(["employee_id": currentUser.id.uuidString, "event_type": "break_start"])
+            .execute() }
+    }
+
+    func endBreak() {
+        clockState = .clockedIn
+        Task { try? await supabase.from("clock_events")
+            .insert(["employee_id": currentUser.id.uuidString, "event_type": "break_end"])
+            .execute() }
+    }
+
     func offerShift(_ shift: Shift) async {
         if let i = self.shift.firstIndex(where: { $0.id == shift.id }) {
             self.shift[i].status = .offered
@@ -461,10 +523,21 @@ struct ManagerAlert: Identifiable {
     }
 
     func approveTimeOff(id: UUID) async {
+        guard let request = timeOff.first(where: { $0.id == id }) else { return }
         if let i = timeOff.firstIndex(where: { $0.id == id }) { timeOff[i].status = .approved }
         do {
             try await supabase.from("kn_time_off")
                 .update(["status": "approved"]).eq("id", value: id.uuidString).execute()
+            // Deduct from employee's PTO balance when approving a PTO request
+            if request.kind == .pto, let emp = staff.first(where: { $0.name == request.staffName }) {
+                let newBalance = max(0, emp.ptoDaysRemaining - Double(request.days))
+                try await supabase.from("employees")
+                    .update(["pto_days_remaining": newBalance])
+                    .eq("id", value: emp.id.uuidString).execute()
+                if let i = staff.firstIndex(where: { $0.id == emp.id }) {
+                    staff[i].ptoDaysRemaining = newBalance
+                }
+            }
         } catch { errorMessage = error.localizedDescription }
     }
 
@@ -678,21 +751,50 @@ struct ManagerAlert: Identifiable {
     }
 
     func fetchEarnings() async {
+        struct ClockEvent: Decodable {
+            let eventType: String; let createdAt: Date
+            enum CodingKeys: String, CodingKey {
+                case eventType = "event_type"; case createdAt = "created_at"
+            }
+        }
         let (weekStart, weekEnd) = currentISOWeekBounds()
         let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
-        let display = DateFormatter(); display.dateFormat = "MMM d"
-        let shifts = (try? await supabase.from("kn_shifts").select()
+        let events = (try? await supabase.from("clock_events")
+            .select("event_type, created_at")
             .eq("employee_id", value: currentUser.id.uuidString)
-            .gte("shift_date", value: df.string(from: weekStart))
-            .lte("shift_date", value: df.string(from: weekEnd))
-            .order("shift_date", ascending: true)
-            .execute().value as [DBShift]) ?? []
-        earningsShifts = shifts.map { s in
-            let date = df.date(from: s.shiftDate) ?? Date()
-            return EarningsShift(day: s.day, date: display.string(from: date),
-                                 hours: hoursFromShift(start: s.startTime, end: s.endTime),
-                                 rate: currentUser.hourlyRate)
+            .gte("created_at", value: df.string(from: weekStart) + "T00:00:00")
+            .lte("created_at", value: df.string(from: weekEnd) + "T23:59:59")
+            .order("created_at", ascending: true)
+            .execute().value as [ClockEvent]) ?? []
+
+        let dayFmt = DateFormatter(); dayFmt.dateFormat = "EEE"
+        let displayFmt = DateFormatter(); displayFmt.dateFormat = "MMM d"
+        var result: [EarningsShift] = []
+        var clockInTime: Date? = nil
+        var breakStart: Date? = nil
+        var breakDuration: TimeInterval = 0
+
+        for event in events {
+            switch event.eventType {
+            case "clock_in":
+                clockInTime = event.createdAt; breakDuration = 0; breakStart = nil
+            case "break_start":
+                breakStart = event.createdAt
+            case "break_end":
+                if let bs = breakStart { breakDuration += event.createdAt.timeIntervalSince(bs); breakStart = nil }
+            case "clock_out":
+                if let ci = clockInTime {
+                    let worked = max(0, event.createdAt.timeIntervalSince(ci) - breakDuration)
+                    result.append(EarningsShift(day: dayFmt.string(from: ci),
+                                                date: displayFmt.string(from: ci),
+                                                hours: worked / 3600,
+                                                rate: currentUser.hourlyRate))
+                }
+                clockInTime = nil; breakDuration = 0
+            default: break
+            }
         }
+        earningsShifts = result
     }
 
     func fetchLaborReport() async {
