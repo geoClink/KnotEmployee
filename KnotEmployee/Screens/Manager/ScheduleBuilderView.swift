@@ -8,6 +8,9 @@ struct ScheduleBuilderView: View {
     @State private var editRow: Int?
     @State private var editDay: Int?
     @State private var weekOffset = 0
+    @State private var showSaveTemplate = false
+    @State private var showLoadTemplate = false
+    @State private var templateName = ""
 
     private var baseMonday: Date {
         var cal = Calendar.current
@@ -105,7 +108,7 @@ struct ScheduleBuilderView: View {
                     Avatar(name: row.name, size: 28).frame(width: 40)
                     ForEach(Array(row.cells.enumerated()), id: \.offset) { dayIdx, cell in
                         Button { editRow = rowIdx; editDay = dayIdx } label: {
-                            cellView(cell)
+                            cellView(cell, available: availableForDay(row.employeeId, dayIndex: dayIdx))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(row.name), \(days[dayIdx].0), \(cell ?? "off")")
@@ -120,7 +123,12 @@ struct ScheduleBuilderView: View {
         .overlay(RoundedRectangle(cornerRadius: theme.rCard).strokeBorder(theme.line, lineWidth: 1))
     }
 
-    private func cellView(_ cell: String?) -> some View {
+    private func availableForDay(_ employeeId: UUID?, dayIndex: Int) -> Bool {
+        guard let eid = employeeId else { return true }
+        return store.allStaffAvailability[eid]?[dayIndex] ?? true
+    }
+
+    private func cellView(_ cell: String?, available: Bool = true) -> some View {
         Group {
             if let cell {
                 Text(cell).font(theme.mono(8.5)).foregroundStyle(theme.roseDeep)
@@ -128,8 +136,11 @@ struct ScheduleBuilderView: View {
                     .frame(maxWidth: .infinity, minHeight: 30)
                     .background(theme.roseSoft, in: RoundedRectangle(cornerRadius: 5))
             } else {
-                Text("·").font(theme.body(11)).foregroundStyle(theme.inkFaint)
+                Text("·").font(theme.body(11))
+                    .foregroundStyle(available ? theme.inkFaint : theme.gold)
                     .frame(maxWidth: .infinity, minHeight: 30)
+                    .background(available ? .clear : theme.gold.opacity(0.08),
+                                in: RoundedRectangle(cornerRadius: 5))
             }
         }
         .padding(.horizontal, 1)
@@ -153,11 +164,24 @@ struct ScheduleBuilderView: View {
 
     private var bottomBar: some View {
         HStack(spacing: 10) {
-            Button { } label: {
-                Text("Save draft").font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
-                    .frame(maxWidth: .infinity).frame(height: 50)
-                    .background(theme.card, in: Capsule())
-                    .overlay(Capsule().strokeBorder(theme.line, lineWidth: 1))
+            Menu {
+                Button {
+                    Task { await store.fetchTemplates() }
+                    showLoadTemplate = true
+                } label: { Label("Load template", systemImage: "arrow.down.doc") }
+                Button {
+                    templateName = ""
+                    showSaveTemplate = true
+                } label: { Label("Save as template", systemImage: "arrow.up.doc") }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "doc.text").font(.system(size: 15))
+                    Text("Templates").font(theme.bodyMedium(15))
+                }
+                .foregroundStyle(theme.ink)
+                .frame(maxWidth: .infinity).frame(height: 50)
+                .background(theme.card, in: Capsule())
+                .overlay(Capsule().strokeBorder(theme.line, lineWidth: 1))
             }
             .buttonStyle(.plain)
             Button {
@@ -179,6 +203,20 @@ struct ScheduleBuilderView: View {
         .padding(16)
         .background(theme.cream)
         .overlay(alignment: .top) { Rectangle().fill(theme.line).frame(height: 1) }
+        .alert("Save as template", isPresented: $showSaveTemplate) {
+            TextField("Template name (e.g. Summer Week)", text: $templateName)
+            Button("Save") {
+                let name = templateName.isEmpty ? "Week of \(weekLabel)" : templateName
+                Task { await store.saveAsTemplate(name: name, weekStart: weekStart) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This saves every shift on the current schedule so you can reuse it in future weeks.")
+        }
+        .sheet(isPresented: $showLoadTemplate) {
+            TemplatePickerSheet(weekLabel: weekLabel, weekStart: weekStart,
+                                published: $published)
+        }
     }
 }
 
@@ -186,4 +224,73 @@ struct ScheduleBuilderView: View {
     ScheduleBuilderView()
         .environment(\.knotTheme, BakeryCoTheme())
         .environment(AppStore.sample)
+}
+
+struct TemplatePickerSheet: View {
+    @Environment(\.knotTheme) private var theme
+    @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    let weekLabel: String
+    let weekStart: Date
+    @Binding var published: Bool
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if store.templates.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 36)).foregroundStyle(theme.inkFaint)
+                        Text("No saved templates")
+                            .font(theme.body(15)).foregroundStyle(theme.inkMuted)
+                        Text("Build a week and use Templates → Save as template.")
+                            .font(theme.body(13)).foregroundStyle(theme.inkFaint)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(40)
+                } else {
+                    List {
+                        Section(footer: Text("Shifts will be applied to \(weekLabel). Existing shifts for that week are kept unless they overlap.").font(theme.body(12)).foregroundStyle(theme.inkMuted)) {
+                            ForEach(store.templates) { t in
+                                Button {
+                                    Task {
+                                        await store.applyTemplate(id: t.id, weekStart: weekStart)
+                                        published = false
+                                        dismiss()
+                                    }
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "doc.text").foregroundStyle(theme.inkSoft)
+                                        Text(t.name).font(theme.body(15)).foregroundStyle(theme.ink)
+                                        Spacer()
+                                        Image(systemName: "arrow.down.doc").font(.system(size: 13))
+                                            .foregroundStyle(theme.inkFaint)
+                                    }
+                                }
+                            }
+                            .onDelete { offsets in
+                                for idx in offsets {
+                                    let id = store.templates[idx].id
+                                    Task { await store.deleteTemplate(id: id) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .background(theme.cream.ignoresSafeArea())
+            .navigationTitle("Load template")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    EditButton()
+                }
+            }
+            .task { await store.fetchTemplates() }
+        }
+    }
 }

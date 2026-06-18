@@ -15,6 +15,7 @@ struct LaborSummary {
 
 struct ScheduleRow: Identifiable {
     let id = UUID()
+    var employeeId: UUID? = nil
     var name: String
     var cells: [String?]   // 7 entries (Mon–Sun); nil = off
 }
@@ -26,6 +27,11 @@ struct ManagerAlert: Identifiable {
     var severity: Severity
     var text: String
     var destination: Destination
+}
+
+struct ScheduleTemplate: Identifiable {
+    let id: UUID
+    var name: String
 }
 
 @Observable @MainActor final class AppStore {
@@ -55,9 +61,26 @@ struct ManagerAlert: Identifiable {
                              onClock: 0, scheduledCount: 0)
     var earningsShifts: [EarningsShift] = []
     var laborReport: [LaborDay] = []
+    var availability: [Bool] = [Bool](repeating: true, count: 7)
+    var templates: [ScheduleTemplate] = []
+    var allStaffAvailability: [UUID: [Bool]] = [:]
+    var actualHoursByEmployee: [UUID: Double] = [:]
+    private var realtimeTask: Task<Void, Never>?
 
     var computedAlerts: [ManagerAlert] {
         var result: [ManagerAlert] = []
+        let overtime = staff.filter { $0.hoursThisWeek >= 40 }
+        if !overtime.isEmpty {
+            result.append(ManagerAlert(severity: .high,
+                text: "\(overtime.count) employee\(overtime.count == 1 ? "" : "s") at or over 40 hrs",
+                destination: .labor))
+        }
+        let approaching = staff.filter { $0.hoursThisWeek >= 35 && $0.hoursThisWeek < 40 }
+        if !approaching.isEmpty {
+            result.append(ManagerAlert(severity: .med,
+                text: "\(approaching.count) employee\(approaching.count == 1 ? "" : "s") approaching overtime",
+                destination: .labor))
+        }
         let pickups = openShifts.filter { $0.status == .pending }.count
         if pickups > 0 {
             result.append(ManagerAlert(severity: .med,
@@ -130,6 +153,7 @@ struct ManagerAlert: Identifiable {
     }
 
     func signOut() {
+        unsubscribeFromMessages()
         Task {
             try? await supabase.auth.signOut()
             currentUser = .placeholder
@@ -180,8 +204,18 @@ struct ManagerAlert: Identifiable {
         isLoading = true
         defer { isLoading = false }
         do {
-            let session = try await supabase.auth.signUp(email: email, password: password)
-            let newUserId = session.user.id
+            // Snapshot the manager's session before signUp replaces it.
+            let managerSession = try await supabase.auth.session
+
+            let authResponse = try await supabase.auth.signUp(email: email, password: password)
+            let newUserId = authResponse.user.id
+
+            // Restore the manager's session so the employees insert passes RLS.
+            try await supabase.auth.setSession(
+                accessToken: managerSession.accessToken,
+                refreshToken: managerSession.refreshToken
+            )
+
             struct NewEmployee: Encodable {
                 let name, role: String
                 let permissionLevel: Int
@@ -265,6 +299,39 @@ struct ManagerAlert: Identifiable {
 
         if let t = try? await fetchThreads() { threads = t }
         await computeClockStatuses()
+        await restoreClockState()
+        await fetchAvailability()
+        await fetchAllStaffAvailability()
+        subscribeToMessages()
+    }
+
+    private func restoreClockState() async {
+        struct ClockRow: Decodable {
+            let eventType: String; let createdAt: Date
+            enum CodingKeys: String, CodingKey {
+                case eventType = "event_type"; case createdAt = "created_at"
+            }
+        }
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        let today = df.string(from: Date())
+        let events = (try? await supabase.from("clock_events")
+            .select("event_type, created_at")
+            .eq("employee_id", value: currentUser.id.uuidString)
+            .gte("created_at", value: today + "T00:00:00Z")
+            .order("created_at", ascending: true)
+            .execute().value as [ClockRow]) ?? []
+        guard let last = events.last else { return }
+        switch last.eventType {
+        case "clock_in":
+            clockState = .clockedIn
+            clockInAt = last.createdAt
+        case "break_start":
+            clockState = .onBreak
+            clockInAt = events.last(where: { $0.eventType == "clock_in" })?.createdAt
+        default:
+            clockState = .out
+            clockInAt = nil
+        }
     }
 
     // MARK: - Fetches
@@ -302,7 +369,9 @@ struct ManagerAlert: Identifiable {
             .execute()
             .value
         return rows.map { row in
-            let name = staff.first(where: { $0.id == row.offeredById })?.name ?? "Staff"
+            let name = row.offeredById == currentUser.id
+                ? "You"
+                : (staff.first(where: { $0.id == row.offeredById })?.name ?? "Staff")
             return row.toOpenShift(offeredByName: name)
         }
     }
@@ -423,6 +492,183 @@ struct ManagerAlert: Identifiable {
         Task { try? await supabase.from("clock_events")
             .insert(["employee_id": currentUser.id.uuidString, "event_type": "clock_out"])
             .execute() }
+    }
+
+    func confirmShift(id: UUID) async {
+        if let i = shift.firstIndex(where: { $0.id == id }) { shift[i].confirmed = true }
+        try? await supabase.from("kn_shifts")
+            .update(["confirmed": true]).eq("id", value: id.uuidString).execute()
+    }
+
+    func fetchAvailability() async {
+        struct DBAvailability: Decodable {
+            let dayOfWeek: Int; let available: Bool
+            enum CodingKeys: String, CodingKey {
+                case dayOfWeek = "day_of_week"; case available
+            }
+        }
+        let rows = (try? await supabase.from("kn_availability")
+            .select("day_of_week, available")
+            .eq("employee_id", value: currentUser.id.uuidString)
+            .execute().value as [DBAvailability]) ?? []
+        var avail = [Bool](repeating: true, count: 7)
+        for row in rows { if row.dayOfWeek < 7 { avail[row.dayOfWeek] = row.available } }
+        availability = avail
+    }
+
+    func fetchAllStaffAvailability() async {
+        struct DBAvailability: Decodable {
+            let employeeId: UUID; let dayOfWeek: Int; let available: Bool
+            enum CodingKeys: String, CodingKey {
+                case employeeId = "employee_id"; case dayOfWeek = "day_of_week"; case available
+            }
+        }
+        let rows = (try? await supabase.from("kn_availability")
+            .select("employee_id, day_of_week, available")
+            .execute().value as [DBAvailability]) ?? []
+        var result: [UUID: [Bool]] = [:]
+        for row in rows {
+            if result[row.employeeId] == nil { result[row.employeeId] = [Bool](repeating: true, count: 7) }
+            if row.dayOfWeek < 7 { result[row.employeeId]![row.dayOfWeek] = row.available }
+        }
+        allStaffAvailability = result
+    }
+
+    func saveAvailability(_ avail: [Bool]) async {
+        availability = avail
+        struct Row: Encodable {
+            let employeeId: String; let dayOfWeek: Int; let available: Bool
+            enum CodingKeys: String, CodingKey {
+                case employeeId = "employee_id"; case dayOfWeek = "day_of_week"; case available
+            }
+        }
+        let rows = avail.enumerated().map { Row(employeeId: currentUser.id.uuidString,
+                                                dayOfWeek: $0.offset, available: $0.element) }
+        try? await supabase.from("kn_availability")
+            .upsert(rows, onConflict: "employee_id,day_of_week").execute()
+    }
+
+    // MARK: - Schedule Templates
+
+    func fetchTemplates() async {
+        struct DBTemplate: Decodable { let id: UUID; let name: String }
+        templates = (try? await supabase.from("kn_schedule_templates")
+            .select("id, name").order("created_at", ascending: false)
+            .execute().value as [DBTemplate])?
+            .map { ScheduleTemplate(id: $0.id, name: $0.name) } ?? []
+    }
+
+    func deleteTemplate(id: UUID) async {
+        try? await supabase.from("kn_schedule_templates").delete().eq("id", value: id.uuidString).execute()
+        templates.removeAll { $0.id == id }
+    }
+
+    func saveAsTemplate(name: String, weekStart: Date) async {
+        let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        let weekEnd = Calendar.current.date(byAdding: .day, value: 6, to: weekStart)!
+        struct DBShiftRow: Decodable {
+            let employeeId: UUID; let day, startTime, endTime, role: String
+            enum CodingKeys: String, CodingKey {
+                case employeeId = "employee_id"; case day
+                case startTime = "start_time"; case endTime = "end_time"; case role
+            }
+        }
+        guard let shifts: [DBShiftRow] = try? await supabase.from("kn_shifts")
+            .select("employee_id, day, start_time, end_time, role")
+            .gte("shift_date", value: df.string(from: weekStart))
+            .lte("shift_date", value: df.string(from: weekEnd))
+            .execute().value else { return }
+        struct NewTemplate: Encodable { let name: String }
+        struct CreatedTemplate: Decodable { let id: UUID }
+        guard let created: CreatedTemplate = try? await supabase.from("kn_schedule_templates")
+            .insert(NewTemplate(name: name)).select("id").single().execute().value else { return }
+        struct TemplateShift: Encodable {
+            let templateId: UUID; let employeeId: UUID; let dayOfWeek: Int
+            let startTime, endTime, role: String
+            enum CodingKeys: String, CodingKey {
+                case templateId = "template_id"; case employeeId = "employee_id"
+                case dayOfWeek = "day_of_week"; case startTime = "start_time"
+                case endTime = "end_time"; case role
+            }
+        }
+        let dayMap = ["Mon": 0, "Tue": 1, "Wed": 2, "Thu": 3, "Fri": 4, "Sat": 5, "Sun": 6]
+        let rows = shifts.compactMap { s -> TemplateShift? in
+            guard let dow = dayMap[s.day] else { return nil }
+            return TemplateShift(templateId: created.id, employeeId: s.employeeId,
+                                 dayOfWeek: dow, startTime: s.startTime, endTime: s.endTime, role: s.role)
+        }
+        try? await supabase.from("kn_template_shifts").insert(rows).execute()
+        await fetchTemplates()
+    }
+
+    func applyTemplate(id: UUID, weekStart: Date) async {
+        struct DBTemplateShift: Decodable {
+            let employeeId: UUID; let dayOfWeek: Int; let startTime, endTime, role: String
+            enum CodingKeys: String, CodingKey {
+                case employeeId = "employee_id"; case dayOfWeek = "day_of_week"
+                case startTime = "start_time"; case endTime = "end_time"; case role
+            }
+        }
+        guard let rows: [DBTemplateShift] = try? await supabase.from("kn_template_shifts")
+            .select("employee_id, day_of_week, start_time, end_time, role")
+            .eq("template_id", value: id.uuidString).execute().value else { return }
+        let cal = Calendar.current; let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+        let dayNames = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+        struct ShiftUpsert: Encodable {
+            let employeeId: UUID; let day, shiftDate, startTime, endTime, role: String
+            enum CodingKeys: String, CodingKey {
+                case employeeId = "employee_id"; case day
+                case shiftDate = "shift_date"; case startTime = "start_time"
+                case endTime = "end_time"; case role
+            }
+        }
+        let upserts = rows.map { ts -> ShiftUpsert in
+            let date = cal.date(byAdding: .day, value: ts.dayOfWeek, to: weekStart)!
+            return ShiftUpsert(employeeId: ts.employeeId, day: dayNames[ts.dayOfWeek],
+                               shiftDate: df.string(from: date),
+                               startTime: ts.startTime, endTime: ts.endTime, role: ts.role)
+        }
+        try? await supabase.from("kn_shifts")
+            .upsert(upserts, onConflict: "employee_id,shift_date").execute()
+        await fetchWeekGrid(weekStart: weekStart)
+    }
+
+    // MARK: - Realtime Messages
+
+    func subscribeToMessages() {
+        realtimeTask?.cancel()
+        realtimeTask = Task {
+            while !Task.isCancelled {
+                let channel = supabase.channel("messages-\(currentUser.id.uuidString)")
+                let inserts = channel.postgresChange(InsertAction.self, schema: "public", table: "kn_messages")
+                await channel.subscribe()
+                for await insert in inserts {
+                    let r = insert.record
+                    guard let threadIdStr = r["thread_id"]?.stringValue,
+                          let threadId = UUID(uuidString: threadIdStr) else { continue }
+                    guard let i = threads.firstIndex(where: { $0.dbId == threadId }) else { continue }
+                    let senderIdStr = r["sender_id"]?.stringValue ?? ""
+                    let isMe = senderIdStr == currentUser.id.uuidString
+                    let text = r["text"]?.stringValue ?? ""
+                    let senderName = isMe ? currentUser.name
+                        : (staff.first(where: { $0.id.uuidString == senderIdStr })?.name ?? "Staff")
+                    let msg = Message(senderName: senderName, text: text,
+                                      timestamp: "Just now", isFromCurrentUser: isMe)
+                    threads[i].messages.append(msg)
+                    threads[i].lastMessage = text
+                    threads[i].timestamp = "Just now"
+                    if !isMe { threads[i].unread = true }
+                }
+                if !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                }
+            }
+        }
+    }
+
+    func unsubscribeFromMessages() {
+        realtimeTask?.cancel()
+        realtimeTask = nil
     }
 
     func startBreak() {
@@ -621,6 +867,8 @@ struct ManagerAlert: Identifiable {
         }
         return Array(result.prefix(7))
     }
+
+    func refreshClockStatuses() async { await computeClockStatuses() }
 
     private func computeClockStatuses() async {
         struct ClockRow: Decodable {
@@ -829,6 +1077,45 @@ struct ManagerAlert: Identifiable {
         for i in staff.indices {
             staff[i].hoursThisWeek = hoursByEmp[staff[i].id] ?? 0
         }
+
+        struct ActualClockRow: Decodable {
+            let employeeId: UUID; let eventType: String; let createdAt: Date
+            enum CodingKeys: String, CodingKey {
+                case employeeId = "employee_id"; case eventType = "event_type"; case createdAt = "created_at"
+            }
+        }
+        let clockRows = (try? await supabase.from("clock_events")
+            .select("employee_id, event_type, created_at")
+            .gte("created_at", value: df.string(from: weekStart) + "T00:00:00")
+            .lte("created_at", value: df.string(from: weekEnd) + "T23:59:59")
+            .order("created_at", ascending: true)
+            .execute().value as [ActualClockRow]) ?? []
+        var clockInByEmp: [UUID: Date] = [:]
+        var breakStartByEmp: [UUID: Date] = [:]
+        var breakDurByEmp: [UUID: TimeInterval] = [:]
+        var actualHrs: [UUID: Double] = [:]
+        for e in clockRows {
+            switch e.eventType {
+            case "clock_in":
+                clockInByEmp[e.employeeId] = e.createdAt; breakDurByEmp[e.employeeId] = 0
+            case "break_start":
+                breakStartByEmp[e.employeeId] = e.createdAt
+            case "break_end":
+                if let bs = breakStartByEmp[e.employeeId] {
+                    breakDurByEmp[e.employeeId, default: 0] += e.createdAt.timeIntervalSince(bs)
+                    breakStartByEmp.removeValue(forKey: e.employeeId)
+                }
+            case "clock_out":
+                if let ci = clockInByEmp[e.employeeId] {
+                    let worked = max(0, e.createdAt.timeIntervalSince(ci) - (breakDurByEmp[e.employeeId] ?? 0))
+                    actualHrs[e.employeeId, default: 0] += worked / 3600
+                }
+                clockInByEmp.removeValue(forKey: e.employeeId)
+                breakDurByEmp.removeValue(forKey: e.employeeId)
+            default: break
+            }
+        }
+        actualHoursByEmployee = actualHrs
     }
 
     func fetchWeekGrid(weekStart: Date) async {
@@ -849,7 +1136,7 @@ struct ManagerAlert: Identifiable {
                 guard let s = memberShifts.first(where: { $0.day == day }) else { return nil }
                 return abbreviateHour(s.startTime) + "–" + abbreviateHour(s.endTime)
             }
-            return ScheduleRow(name: member.name, cells: cells)
+            return ScheduleRow(employeeId: member.id, name: member.name, cells: cells)
         }
     }
 

@@ -33,9 +33,10 @@ struct DBShift: Decodable {
     let note: String?
     let breakLabel: String?
     let status: String
+    let confirmed: Bool?
 
     enum CodingKeys: String, CodingKey {
-        case id, day, role, note, status
+        case id, day, role, note, status, confirmed
         case employeeId  = "employee_id"
         case shiftDate   = "shift_date"
         case startTime   = "start_time"
@@ -197,7 +198,8 @@ extension DBShift {
             role: role,
             note: note,
             breakLabel: breakLabel,
-            status: Shift.Status(rawValue: status) ?? .scheduled
+            status: Shift.Status(rawValue: status) ?? .scheduled,
+            confirmed: confirmed ?? false
         )
     }
 }

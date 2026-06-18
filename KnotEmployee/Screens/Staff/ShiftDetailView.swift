@@ -2,10 +2,13 @@ import SwiftUI
 
 struct ShiftDetailView: View {
     @Environment(\.knotTheme) private var theme
+    @Environment(AppStore.self) private var store
     let shift: Shift
     var onSwap: () -> Void = {}
     var onGiveUp: () -> Void = {}
     var onTimeOff: () -> Void = {}
+
+    @State private var showGiveUpConfirm = false
 
     var body: some View {
         ScrollView {
@@ -65,8 +68,60 @@ struct ShiftDetailView: View {
 
     private var actions: some View {
         VStack(spacing: 10) {
+            let liveShift = store.shift.first(where: { $0.id == shift.id })
+            let confirmed = liveShift?.confirmed ?? shift.confirmed
+            let offered   = liveShift?.status == .offered
+
+            if !confirmed {
+                Button {
+                    Task { await store.confirmShift(id: shift.id) }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 18)).foregroundStyle(theme.green)
+                        Text("Confirm shift").font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
+                    }
+                    .frame(maxWidth: .infinity).frame(height: 50)
+                    .background(theme.green.opacity(0.10), in: Capsule())
+                    .overlay(Capsule().strokeBorder(theme.green.opacity(0.3), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Confirm shift")
+            } else {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 15)).foregroundStyle(theme.green)
+                    Text("Shift confirmed").font(theme.body(14)).foregroundStyle(theme.green)
+                }
+                .frame(maxWidth: .infinity).frame(height: 44)
+            }
             actionButton(icon: .swap, title: "Request a swap", action: onSwap)
-            actionButton(icon: .handoff, title: "Give up shift", action: onGiveUp)
+            if offered {
+                HStack(spacing: 8) {
+                    IconView(icon: .handoff, size: 18, color: theme.inkMuted)
+                    Text("Shift given up").font(theme.bodyMedium(15)).foregroundStyle(theme.inkMuted)
+                }
+                .frame(maxWidth: .infinity).frame(height: 50)
+                .background(theme.creamDeep, in: Capsule())
+            } else {
+                Button { showGiveUpConfirm = true } label: {
+                    HStack(spacing: 8) {
+                        IconView(icon: .handoff, size: 18, color: theme.ink)
+                        Text("Give up shift").font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
+                    }
+                    .frame(maxWidth: .infinity).frame(height: 50)
+                    .background(theme.card, in: Capsule())
+                    .overlay(Capsule().strokeBorder(theme.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Give up shift")
+                .confirmationDialog("Give up this shift?", isPresented: $showGiveUpConfirm, titleVisibility: .visible) {
+                    Button("Give up shift", role: .destructive) { onGiveUp() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will post your shift to the open shifts board for a teammate to pick up.")
+                }
+            }
             actionButton(icon: .calendar, title: "Request time off", action: onTimeOff)
         }
         .padding(.top, 8)

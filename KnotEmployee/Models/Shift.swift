@@ -12,6 +12,7 @@ struct Shift: Identifiable, Hashable {
     var note: String? = nil
     var breakLabel: String? = nil
     var status: Status = .scheduled
+    var confirmed: Bool = false
     var timeRange: String {
         let inf = DateFormatter(); inf.dateFormat = "HH:mm"
         let outf = DateFormatter(); outf.dateFormat = "h:mm a"
@@ -21,9 +22,10 @@ struct Shift: Identifiable, Hashable {
 
     init(id: UUID = UUID(), day: String, date: String, shiftDate: String = "",
          start: String, end: String, role: String, note: String? = nil,
-         breakLabel: String? = nil, status: Status = .scheduled) {
+         breakLabel: String? = nil, status: Status = .scheduled, confirmed: Bool = false) {
         self.id = id; self.day = day; self.date = date; self.shiftDate = shiftDate
         self.start = start; self.end = end; self.role = role
         self.note = note; self.breakLabel = breakLabel; self.status = status
+        self.confirmed = confirmed
     }
 }

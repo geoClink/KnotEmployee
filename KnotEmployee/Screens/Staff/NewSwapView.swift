@@ -132,11 +132,10 @@ struct NewSwapView: View {
                 Text("Request swap").font(theme.bodyMedium(15)).foregroundStyle(theme.paper)
             }
             .frame(maxWidth: .infinity).frame(height: 50)
-            .background((selectedShift != nil && selectedPerson != nil) ? theme.ink : theme.inkFaint,
-                         in: Capsule())
+            .background(selectedPerson != nil ? theme.ink : theme.inkFaint, in: Capsule())
         }
         .buttonStyle(.plain)
-        .disabled(selectedShift == nil || selectedPerson == nil)
+        .disabled(selectedPerson == nil)
         .accessibilityLabel("Request swap")
     }
 

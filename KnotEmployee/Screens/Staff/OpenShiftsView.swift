@@ -4,13 +4,17 @@ struct OpenShiftsView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
 
+    private var visibleShifts: [OpenShift] {
+        store.openShifts.filter { $0.status == .open || ($0.status == .pending && $0.offeredBy == "You") }
+    }
+
     var body: some View {
         ScrollView {
-            if store.openShifts.isEmpty {
+            if visibleShifts.isEmpty {
                 emptyState
             } else {
                 VStack(spacing: 12) {
-                    ForEach(store.openShifts) { shift in
+                    ForEach(visibleShifts) { shift in
                         OpenShiftRow(shift: shift) { pickUp(shift) }
                     }
                     footerNote

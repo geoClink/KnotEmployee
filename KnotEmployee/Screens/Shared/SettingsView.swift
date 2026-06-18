@@ -36,6 +36,9 @@ struct SettingsView: View {
                         NavigationLink { AccountView() } label: { navRowContent(.user, "Account") }
                             .buttonStyle(.plain)
                         divider
+                        NavigationLink { AvailabilityView() } label: { navRowContent(.calendar, "My availability") }
+                            .buttonStyle(.plain)
+                        divider
                         NavigationLink { ChangePINView() } label: { navRowContent(.lock, "Change password") }
                             .buttonStyle(.plain)
                         divider

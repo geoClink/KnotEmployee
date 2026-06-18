@@ -46,6 +46,8 @@ struct StaffDirectoryView: View {
             }
             .background(theme.cream.ignoresSafeArea())
             .navigationTitle("Team")
+            .task { await store.refreshClockStatuses() }
+            .refreshable { await store.refreshClockStatuses() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showAddEmployee = true } label: {

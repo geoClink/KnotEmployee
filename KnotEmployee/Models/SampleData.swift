@@ -16,11 +16,11 @@ extension AppStore {
             ],
             
             shift: [
-                Shift(day: "Mon", date: "Jun 9",  start: "6:00 AM", end: "2:00 PM",  role: "Lead Baker", note: "Sourdough + croissant prep."),
-                Shift(day: "Wed", date: "Jun 11", start: "6:00 AM", end: "2:00 PM",  role: "Lead Baker"),
-                Shift(day: "Thu", date: "Jun 12", start: "7:00 AM", end: "3:00 PM",  role: "Lead Baker"),
-                Shift(day: "Fri", date: "Jun 13", start: "6:00 AM", end: "12:00 PM", role: "Lead Baker", note: "Market day — double batch.", breakLabel: "30 min · unpaid"),
-                Shift(day: "Sun", date: "Jun 15", start: "7:00 AM", end: "1:00 PM",  role: "Lead Baker")
+                Shift(day: "Mon", date: "Jun 9",  start: "06:00", end: "14:00", role: "Lead Baker", note: "Sourdough + croissant prep."),
+                Shift(day: "Wed", date: "Jun 11", start: "08:00", end: "16:00", role: "Lead Baker", breakLabel: "30 min · unpaid"),
+                Shift(day: "Thu", date: "Jun 12", start: "13:00", end: "21:00", role: "Lead Baker"),
+                Shift(day: "Fri", date: "Jun 13", start: "06:00", end: "12:00", role: "Lead Baker", note: "Market day — double batch.", breakLabel: "30 min · unpaid"),
+                Shift(day: "Sun", date: "Jun 15", start: "09:00", end: "17:00", role: "Lead Baker")
             ],
             openShifts: [
                 OpenShift(offeredBy: "Aisha Bello", day: "Sat", date: "Jun 14",
