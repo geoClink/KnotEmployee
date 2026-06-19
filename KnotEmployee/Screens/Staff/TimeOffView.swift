@@ -18,6 +18,15 @@ struct TimeOffView: View {
                             VStack(spacing: 10) {
                                 ForEach(store.timeOff) { request in
                                     TimeOffRequestRow(request: request)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                            if request.status == .pending {
+                                                Button(role: .destructive) {
+                                                    Task { await store.cancelTimeOff(id: request.id) }
+                                                } label: {
+                                                    Label("Cancel", systemImage: "xmark")
+                                                }
+                                            }
+                                        }
                                 }
                             }
                         }

@@ -2,6 +2,7 @@ import Observation
 import Foundation
 import Supabase
 import UserNotifications
+import Network
 
 enum ClockState { case out, clockedIn, onBreak }
 
@@ -67,6 +68,9 @@ struct ScheduleTemplate: Identifiable {
     var allStaffAvailability: [UUID: [Bool]] = [:]
     var actualHoursByEmployee: [UUID: Double] = [:]
     private var realtimeTask: Task<Void, Never>?
+    private let networkMonitor = NWPathMonitor()
+    var isOffline = false
+    var selectedTab = 0
 
     var computedAlerts: [ManagerAlert] {
         var result: [ManagerAlert] = []
@@ -134,6 +138,12 @@ struct ScheduleTemplate: Identifiable {
         timeOff       = []
         threads       = []
         notifications = []
+        networkMonitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor [weak self] in
+                self?.isOffline = path.status != .satisfied
+            }
+        }
+        networkMonitor.start(queue: DispatchQueue(label: "kn.network"))
     }
 
     // MARK: - Auth
@@ -154,7 +164,7 @@ struct ScheduleTemplate: Identifiable {
     }
 
     func signOut() {
-        unsubscribeFromMessages()
+        unsubscribeFromRealtime()
         Task {
             try? await supabase.auth.signOut()
             currentUser = .placeholder
@@ -332,8 +342,9 @@ struct ScheduleTemplate: Identifiable {
         await restoreClockState()
         await fetchAvailability()
         await fetchAllStaffAvailability()
-        subscribeToMessages()
+        subscribeToRealtime()
         scheduleShiftReminders()
+        if isManager { await fetchLaborReport() }
     }
 
     private func restoreClockState() async {
@@ -664,32 +675,40 @@ struct ScheduleTemplate: Identifiable {
         await fetchWeekGrid(weekStart: weekStart)
     }
 
-    // MARK: - Realtime Messages
+    // MARK: - Realtime
 
-    func subscribeToMessages() {
+    func subscribeToRealtime() {
         realtimeTask?.cancel()
         realtimeTask = Task {
             while !Task.isCancelled {
-                let channel = supabase.channel("messages-\(currentUser.id.uuidString)")
-                let inserts = channel.postgresChange(InsertAction.self, schema: "public", table: "kn_messages")
+                let channel = supabase.channel("realtime-\(currentUser.id.uuidString)")
+
+                let messageInserts  = channel.postgresChange(InsertAction.self, schema: "public", table: "kn_messages")
+                let notifInserts    = channel.postgresChange(InsertAction.self, schema: "public", table: "kn_notifications")
+                let swapChanges     = channel.postgresChange(AnyAction.self,    schema: "public", table: "kn_swaps")
+                let timeOffChanges  = channel.postgresChange(AnyAction.self,    schema: "public", table: "kn_time_off")
+                let shiftChanges    = channel.postgresChange(AnyAction.self,    schema: "public", table: "kn_shifts")
+
                 await channel.subscribe()
-                for await insert in inserts {
-                    let r = insert.record
-                    guard let threadIdStr = r["thread_id"]?.stringValue,
-                          let threadId = UUID(uuidString: threadIdStr) else { continue }
-                    guard let i = threads.firstIndex(where: { $0.dbId == threadId }) else { continue }
-                    let senderIdStr = r["sender_id"]?.stringValue ?? ""
-                    let isMe = senderIdStr == currentUser.id.uuidString
-                    let text = r["text"]?.stringValue ?? ""
-                    let senderName = isMe ? currentUser.name
-                        : (staff.first(where: { $0.id.uuidString == senderIdStr })?.name ?? "Staff")
-                    let msg = Message(senderName: senderName, text: text,
-                                      timestamp: "Just now", isFromCurrentUser: isMe)
-                    threads[i].messages.append(msg)
-                    threads[i].lastMessage = text
-                    threads[i].timestamp = "Just now"
-                    if !isMe { threads[i].unread = true }
+
+                await withTaskGroup(of: Void.self) { group in
+                    group.addTask {
+                        for await insert in messageInserts { await self.handleIncomingMessage(insert) }
+                    }
+                    group.addTask {
+                        for await _ in notifInserts { await self.reloadNotifications() }
+                    }
+                    group.addTask {
+                        for await _ in swapChanges { await self.reloadSwaps() }
+                    }
+                    group.addTask {
+                        for await _ in timeOffChanges { await self.reloadTimeOff() }
+                    }
+                    group.addTask {
+                        for await _ in shiftChanges { await self.reloadShifts() }
+                    }
                 }
+
                 if !Task.isCancelled {
                     try? await Task.sleep(nanoseconds: 3_000_000_000)
                 }
@@ -697,9 +716,27 @@ struct ScheduleTemplate: Identifiable {
         }
     }
 
-    func unsubscribeFromMessages() {
+    func unsubscribeFromRealtime() {
         realtimeTask?.cancel()
         realtimeTask = nil
+    }
+
+    private func handleIncomingMessage(_ insert: InsertAction) {
+        let r = insert.record
+        guard let threadIdStr = r["thread_id"]?.stringValue,
+              let threadId = UUID(uuidString: threadIdStr) else { return }
+        guard let i = threads.firstIndex(where: { $0.dbId == threadId }) else { return }
+        let senderIdStr = r["sender_id"]?.stringValue ?? ""
+        let isMe = senderIdStr == currentUser.id.uuidString
+        let text = r["text"]?.stringValue ?? ""
+        let senderName = isMe ? currentUser.name
+            : (staff.first(where: { $0.id.uuidString == senderIdStr })?.name ?? "Staff")
+        let msg = Message(senderName: senderName, text: text,
+                          timestamp: "Just now", isFromCurrentUser: isMe)
+        threads[i].messages.append(msg)
+        threads[i].lastMessage = text
+        threads[i].timestamp = "Just now"
+        if !isMe { threads[i].unread = true }
     }
 
     func startBreak() {
@@ -761,13 +798,26 @@ struct ScheduleTemplate: Identifiable {
                          note: note?.isEmpty == true ? nil : note)
         try await supabase.from("kn_time_off").insert(row).execute()
         if let fresh = try? await fetchTimeOff() { timeOff = fresh }
+        let displayFmt = DateFormatter(); displayFmt.dateFormat = "MMM d"
+        let startStr = displayFmt.string(from: startDate)
+        let endStr   = displayFmt.string(from: endDate)
+        let range    = Calendar.current.isDate(startDate, inSameDayAs: endDate) ? startStr : "\(startStr) – \(endStr)"
+        await notifyManagers(icon: "calendar", title: "Time off request",
+                             body: "\(currentUser.name) requested \(kind.rawValue) · \(range)",
+                             category: "timeOff")
     }
 
     func pickUpShift(id: UUID) async {
+        let openShift = openShifts.first(where: { $0.id == id })
         if let i = openShifts.firstIndex(where: { $0.id == id }) { openShifts[i].status = .pending }
         do {
             try await supabase.from("kn_open_shifts")
                 .update(["status": "pending"]).eq("id", value: id.uuidString).execute()
+            if let s = openShift {
+                await notifyManagers(icon: "calendar", title: "Shift pickup",
+                                     body: "\(currentUser.name) wants to pick up \(s.day) \(s.date)",
+                                     category: "shift")
+            }
         } catch { errorMessage = error.localizedDescription }
     }
 
@@ -868,6 +918,73 @@ struct ScheduleTemplate: Identifiable {
         if let fresh = try? await fetchNotifications() { notifications = fresh }
     }
 
+    func reloadSwaps() async {
+        if let fresh = try? await fetchSwaps() { swaps = fresh }
+    }
+
+    func reloadTimeOff() async {
+        if let fresh = try? await fetchTimeOff() { timeOff = fresh }
+    }
+
+    func reloadShifts() async {
+        if let fresh = try? await fetchShifts() { shift = fresh }
+    }
+
+    func handleNotificationTap(category: String) {
+        if isManager {
+            selectedTab = category == "message" ? 3 : 4
+        } else {
+            switch category {
+            case "shift", "schedule": selectedTab = 0
+            case "message":           selectedTab = 2
+            default:                  selectedTab = 3
+            }
+        }
+    }
+
+    func cancelTimeOff(id: UUID) async {
+        timeOff.removeAll { $0.id == id }
+        do {
+            try await supabase.from("kn_time_off").delete().eq("id", value: id.uuidString).execute()
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    func cancelSwap(id: UUID) async {
+        swaps.removeAll { $0.id == id }
+        do {
+            try await supabase.from("kn_swaps").delete().eq("id", value: id.uuidString).execute()
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    func deactivateEmployee(id: UUID) async {
+        staff.removeAll { $0.id == id }
+        do {
+            try await supabase.from("employees").update(["active": false]).eq("id", value: id.uuidString).execute()
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    func updateEmployeeRate(id: UUID, rate: Double) async {
+        if let i = staff.firstIndex(where: { $0.id == id }) { staff[i].hourlyRate = rate }
+        do {
+            try await supabase.from("employees").update(["hourly_rate": rate]).eq("id", value: id.uuidString).execute()
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    private func notifyManagers(icon: String, title: String, body: String, category: String) async {
+        let managers = staff.filter { $0.role == .manager }
+        guard !managers.isEmpty else { return }
+        struct NotifInsert: Encodable {
+            let employeeId, icon, title, body, category: String
+            enum CodingKeys: String, CodingKey {
+                case employeeId = "employee_id"; case icon, title, body, category
+            }
+        }
+        let rows = managers.map {
+            NotifInsert(employeeId: $0.id.uuidString, icon: icon, title: title, body: body, category: category)
+        }
+        try? await supabase.from("kn_notifications").insert(rows).execute()
+    }
+
     func fetchShiftsForWeek(weekStart: Date) async -> [Shift] {
         let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
         let end = Calendar.current.date(byAdding: .day, value: 6, to: weekStart)!
@@ -965,6 +1082,9 @@ struct ScheduleTemplate: Identifiable {
                                fromShiftId: shift?.id.uuidString))
                 .execute()
             if let fresh = try? await fetchSwaps() { swaps = fresh }
+            await notifyManagers(icon: "arrow.left.arrow.right", title: "Swap request",
+                                 body: "\(currentUser.name) wants to swap with \(withEmployee.name)",
+                                 category: "swap")
         } catch { errorMessage = error.localizedDescription }
     }
 
@@ -1008,30 +1128,60 @@ struct ScheduleTemplate: Identifiable {
         let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
         let today = df.string(from: Date())
         struct ClockRow: Decodable {
-            let employeeId: String; let eventType: String
+            let employeeId: String; let eventType: String; let createdAt: Date
             enum CodingKeys: String, CodingKey {
-                case employeeId = "employee_id"; case eventType = "event_type"
+                case employeeId = "employee_id"; case eventType = "event_type"; case createdAt = "created_at"
             }
         }
         let shifts = (try? await supabase.from("kn_shifts").select()
             .eq("shift_date", value: today).execute().value as [DBShift]) ?? []
         let events = (try? await supabase.from("clock_events")
-            .select("employee_id,event_type")
+            .select("employee_id, event_type, created_at")
             .gte("created_at", value: today + "T00:00:00Z")
             .order("created_at", ascending: true)
             .execute().value as [ClockRow]) ?? []
+
         var lastEvent: [String: String] = [:]
         for e in events { lastEvent[e.employeeId] = e.eventType }
         let onClock = lastEvent.values.filter { $0 == "clock_in" }.count
+
         var scheduled = 0.0
         for s in shifts {
             let rate = staff.first(where: { $0.id == s.employeeId })?.hourlyRate ?? 0
             scheduled += rate * hoursFromShift(start: s.startTime, end: s.endTime)
         }
-        labor = LaborSummary(actualToday: Int(scheduled * 0.6),
+
+        var clockInByEmp: [String: Date] = [:]
+        var breakStartByEmp: [String: Date] = [:]
+        var breakDurByEmp: [String: TimeInterval] = [:]
+        var actualCost = 0.0
+        for e in events {
+            switch e.eventType {
+            case "clock_in":
+                clockInByEmp[e.employeeId] = e.createdAt; breakDurByEmp[e.employeeId] = 0
+            case "break_start":
+                breakStartByEmp[e.employeeId] = e.createdAt
+            case "break_end":
+                if let bs = breakStartByEmp[e.employeeId] {
+                    breakDurByEmp[e.employeeId, default: 0] += e.createdAt.timeIntervalSince(bs)
+                    breakStartByEmp.removeValue(forKey: e.employeeId)
+                }
+            case "clock_out":
+                if let ci = clockInByEmp[e.employeeId] {
+                    let worked = max(0, e.createdAt.timeIntervalSince(ci) - (breakDurByEmp[e.employeeId] ?? 0))
+                    let rate = staff.first(where: { $0.id.uuidString == e.employeeId })?.hourlyRate ?? 0
+                    actualCost += (worked / 3600) * rate
+                }
+                clockInByEmp.removeValue(forKey: e.employeeId)
+                breakDurByEmp.removeValue(forKey: e.employeeId)
+            default: break
+            }
+        }
+
+        labor = LaborSummary(actualToday: Int(actualCost),
                              scheduledToday: Int(scheduled),
-                             forecastToday: Int(scheduled * 1.05),
-                             pctOfSales: scheduled > 0 ? 24 : 0,
+                             forecastToday: Int(scheduled),
+                             pctOfSales: 0,
                              onClock: onClock,
                              scheduledCount: shifts.count)
     }

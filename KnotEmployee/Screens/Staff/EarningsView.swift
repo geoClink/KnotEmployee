@@ -13,7 +13,7 @@ struct EarningsView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     heroCard
                     if store.earningsShifts.isEmpty {
-                        Text("No shifts scheduled this week.")
+                        Text("No hours recorded this week.")
                             .font(theme.body(14)).foregroundStyle(theme.inkMuted)
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.top, 20)

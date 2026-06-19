@@ -59,7 +59,7 @@ struct SettingsView: View {
                 Avatar(name: store.currentUser.name, size: 54)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(store.currentUser.name).font(theme.display(20)).foregroundStyle(theme.ink)
-                    Text("\(store.currentUser.jobTitle) · The Bakery Co.")
+                    Text("\(store.currentUser.jobTitle) · \(theme.name)")
                         .font(theme.body(13)).foregroundStyle(theme.inkMuted)
                 }
                 Spacer()

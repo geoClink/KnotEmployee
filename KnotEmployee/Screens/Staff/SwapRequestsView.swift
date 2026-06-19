@@ -14,6 +14,15 @@ struct SwapRequestsView: View {
                     VStack(spacing: 10) {
                         ForEach(store.swaps) { swap in
                             SwapRequestRow(swap: swap)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    if swap.status == .pending && swap.direction == .outgoing {
+                                        Button(role: .destructive) {
+                                            Task { await store.cancelSwap(id: swap.id) }
+                                        } label: {
+                                            Label("Cancel", systemImage: "xmark")
+                                        }
+                                    }
+                                }
                         }
                         footerNote
                     }

@@ -29,7 +29,7 @@ struct ManagerHomeView: View {
             Text("MANAGER").font(theme.mono(11)).foregroundStyle(theme.gold)
                 .padding(.horizontal, 9).padding(.vertical, 3)
                 .background(theme.gold.opacity(0.16), in: Capsule())
-            Text("The Bakery Co.").font(theme.display(28)).foregroundStyle(theme.ink)
+            Text(theme.name).font(theme.display(28)).foregroundStyle(theme.ink)
             Text(Date().formatted(.dateTime.weekday(.wide).month(.wide).day()))
                 .font(theme.body(13)).foregroundStyle(theme.inkMuted)
         }
@@ -38,11 +38,7 @@ struct ManagerHomeView: View {
     private var laborCard: some View {
         let l = store.labor
         return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Labor cost · today").font(theme.body(13)).foregroundStyle(theme.inkFaint)
-                Spacer()
-                Text("\(l.pctOfSales)% of sales").font(theme.mono(12)).foregroundStyle(theme.paper)
-            }
+            Text("Labor cost · today").font(theme.body(13)).foregroundStyle(theme.inkFaint)
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("$\(l.actualToday)").font(theme.display(40)).foregroundStyle(theme.paper)
                 Text("/ $\(l.scheduledToday) sched").font(theme.body(13)).foregroundStyle(theme.inkFaint)

@@ -3,11 +3,15 @@ import SwiftUI
 struct StaffDetailView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     let person: StaffMember
 
     @State private var clockHistory: [(date: String, clockIn: String, clockOut: String, hours: String)] = []
     @State private var shiftsThisWeek = 0
     @State private var showThread = false
+    @State private var showDeactivateConfirm = false
+    @State private var showEditRate = false
+    @State private var rateInput = ""
 
     var body: some View {
         ScrollView {
@@ -71,6 +75,43 @@ struct StaffDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showThread) {
             MessageThreadView(thread: threadFor(person))
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        rateInput = String(format: "%.2f", person.hourlyRate)
+                        showEditRate = true
+                    } label: {
+                        Label("Edit hourly rate", systemImage: "pencil")
+                    }
+                    Button(role: .destructive) { showDeactivateConfirm = true } label: {
+                        Label("Deactivate employee", systemImage: "person.crop.circle.badge.minus")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .confirmationDialog("Deactivate \(person.name)?",
+                            isPresented: $showDeactivateConfirm, titleVisibility: .visible) {
+            Button("Deactivate", role: .destructive) {
+                Task {
+                    await store.deactivateEmployee(id: person.id)
+                    dismiss()
+                }
+            }
+        } message: {
+            Text("They will no longer appear in the schedule or staff directory.")
+        }
+        .alert("Edit hourly rate", isPresented: $showEditRate) {
+            TextField("e.g. 18.00", text: $rateInput).keyboardType(.decimalPad)
+            Button("Save") {
+                if let rate = Double(rateInput) {
+                    Task { await store.updateEmployeeRate(id: person.id, rate: rate) }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
         }
         .task {
             async let history = store.fetchClockHistory(employeeId: person.id)

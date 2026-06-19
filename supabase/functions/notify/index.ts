@@ -42,7 +42,7 @@ async function buildAPNsJWT(): Promise<string> {
 
 // ─── Send to a single device token ──────────────────────────────────────────
 
-async function sendToToken(token: string, title: string, body: string): Promise<void> {
+async function sendToToken(token: string, title: string, body: string, category: string): Promise<void> {
   const jwt      = await buildAPNsJWT();
   const isSandbox = (Deno.env.get("APNS_ENV") ?? "sandbox") !== "production";
   const host     = isSandbox
@@ -58,7 +58,7 @@ async function sendToToken(token: string, title: string, body: string): Promise<
       "content-type":   "application/json",
     },
     body: JSON.stringify({
-      aps: { alert: { title, body }, badge: 1, sound: "default" },
+      aps: { alert: { title, body }, badge: 1, sound: "default", category },
     }),
   });
 
@@ -71,7 +71,7 @@ async function sendToToken(token: string, title: string, body: string): Promise<
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 // deno-lint-ignore no-explicit-any
-async function notifyEmployee(supabase: any, employeeId: string, title: string, body: string) {
+async function notifyEmployee(supabase: any, employeeId: string, title: string, body: string, category: string) {
   const { data } = await supabase
     .from("device_tokens")
     .select("token")
@@ -79,7 +79,7 @@ async function notifyEmployee(supabase: any, employeeId: string, title: string, 
     .single();
 
   if (data?.token) {
-    await sendToToken(data.token, title, body);
+    await sendToToken(data.token, title, body, category);
   }
 }
 
@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
           record.employee_id,
           `Time off ${verb}`,
           `Your ${record.kind} request has been ${record.status}.`,
+          "timeOff",
         );
       }
     }
@@ -116,6 +117,7 @@ Deno.serve(async (req) => {
           record.from_employee_id,
           `Swap ${record.status}`,
           `Your shift swap request has been ${record.status}.`,
+          "swap",
         );
       }
       if (type === "INSERT") {
@@ -126,6 +128,7 @@ Deno.serve(async (req) => {
           record.with_employee_id,
           "Swap request",
           `${requester?.name ?? "A teammate"} wants to swap a shift with you.`,
+          "swap",
         );
       }
     }
@@ -137,13 +140,14 @@ Deno.serve(async (req) => {
         record.employee_id,
         "New shift scheduled",
         `You're on for ${record.day} ${record.shift_date} (${record.start_time} – ${record.end_time}).`,
+        "shift",
       );
     }
 
     // New message → notify all thread participants except the sender
     if (table === "kn_messages" && type === "INSERT") {
       const { data: participants } = await supabase
-        .from("kn_message_participants")
+        .from("kn_thread_participants")
         .select("employee_id")
         .eq("thread_id", record.thread_id)
         .neq("employee_id", record.sender_id);
@@ -156,7 +160,7 @@ Deno.serve(async (req) => {
           : record.text;
 
         for (const p of participants) {
-          await notifyEmployee(supabase, p.employee_id, sender?.name ?? "New message", preview);
+          await notifyEmployee(supabase, p.employee_id, sender?.name ?? "New message", preview, "message");
         }
       }
     }
