@@ -31,6 +31,7 @@ struct SwapRequestsView: View {
             }
             .background(theme.cream.ignoresSafeArea())
             .navigationTitle("Swap requests")
+            .refreshable { try? await store.loadInitialData() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showNewSwap = true } label: {

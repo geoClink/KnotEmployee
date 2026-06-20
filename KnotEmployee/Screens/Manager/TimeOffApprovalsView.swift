@@ -23,6 +23,7 @@ struct TimeOffApprovalsView: View {
         }
         .background(theme.cream.ignoresSafeArea())
         .navigationTitle("Time off requests")
+        .refreshable { try? await store.loadInitialData() }
         .task(id: pending.map(\.id)) {
             await loadConflicts()
         }
@@ -73,7 +74,7 @@ struct TimeOffApprovalsView: View {
             }
 
             HStack(spacing: 8) {
-                Button { deny(request) } label: {
+                Button { hapticNotification(.warning); deny(request) } label: {
                     Text("Deny").font(theme.bodyMedium(14)).foregroundStyle(theme.inkSoft)
                         .frame(maxWidth: .infinity).frame(height: 40)
                         .background(Capsule().strokeBorder(theme.line, lineWidth: 1))
@@ -82,7 +83,7 @@ struct TimeOffApprovalsView: View {
                 .accessibilityLabel("Deny time off for \(request.staffName)")
                 .accessibilityHint("Rejects the request")
 
-                Button { approve(request) } label: {
+                Button { hapticNotification(.success); approve(request) } label: {
                     HStack(spacing: 6) {
                         IconView(icon: .check, size: 16, color: theme.paper)
                         Text("Approve").font(theme.bodyMedium(14)).foregroundStyle(theme.paper)

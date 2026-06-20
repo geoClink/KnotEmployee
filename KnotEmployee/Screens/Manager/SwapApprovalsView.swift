@@ -33,6 +33,7 @@ struct ApprovalsView: View {
         }
         .background(theme.cream.ignoresSafeArea())
         .navigationTitle("Approvals")
+        .refreshable { try? await store.loadInitialData() }
     }
 
     private func sectionHeader(_ title: String) -> some View {
@@ -60,7 +61,7 @@ struct ApprovalsView: View {
                     .background(theme.cream, in: RoundedRectangle(cornerRadius: 8))
             }
             HStack(spacing: 8) {
-                Button { deny(shift) } label: {
+                Button { hapticNotification(.warning); deny(shift) } label: {
                     Text("Deny").font(theme.bodyMedium(14)).foregroundStyle(theme.inkSoft)
                         .frame(maxWidth: .infinity).frame(height: 40)
                         .background(Capsule().strokeBorder(theme.line, lineWidth: 1))
@@ -68,7 +69,7 @@ struct ApprovalsView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Deny pickup from \(shift.offeredBy)")
                 .accessibilityHint("Rejects the open shift pickup")
-                Button { approve(shift) } label: {
+                Button { hapticNotification(.success); approve(shift) } label: {
                     HStack(spacing: 6) {
                         IconView(icon: .check, size: 16, color: theme.paper)
                         Text("Approve").font(theme.bodyMedium(14)).foregroundStyle(theme.paper)
@@ -106,7 +107,7 @@ struct ApprovalsView: View {
                 StatusBadge(status: .pending, small: true)
             }
             HStack(spacing: 8) {
-                Button { denySwap(swap) } label: {
+                Button { hapticNotification(.warning); denySwap(swap) } label: {
                     Text("Deny").font(theme.bodyMedium(14)).foregroundStyle(theme.inkSoft)
                         .frame(maxWidth: .infinity).frame(height: 40)
                         .background(Capsule().strokeBorder(theme.line, lineWidth: 1))
@@ -114,7 +115,7 @@ struct ApprovalsView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Deny swap request from \(swap.fromName)")
                 .accessibilityHint("Rejects the swap")
-                Button { approveSwap(swap) } label: {
+                Button { hapticNotification(.success); approveSwap(swap) } label: {
                     HStack(spacing: 6) {
                         IconView(icon: .check, size: 16, color: theme.paper)
                         Text("Approve").font(theme.bodyMedium(14)).foregroundStyle(theme.paper)

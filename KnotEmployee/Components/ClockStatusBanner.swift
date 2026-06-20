@@ -34,7 +34,7 @@ struct ClockStatusBanner: View {
             }
 
             if store.clockState == .clockedIn {
-                Button { store.startBreak() } label: {
+                Button { hapticImpact(.light); store.startBreak() } label: {
                     Text("Take a break").font(theme.bodyMedium(13)).foregroundStyle(theme.paper)
                         .frame(maxWidth: .infinity).frame(height: 38)
                         .background(theme.paper.opacity(0.10), in: Capsule())
@@ -105,6 +105,7 @@ struct ClockStatusBanner: View {
     private var buttonTextColor: Color { store.clockState == .out ? theme.paper : theme.ink }
 
     private func primaryAction() {
+        hapticNotification(.success)
         switch store.clockState {
         case .out:      store.clockIn()
         case .clockedIn: store.clockOut()

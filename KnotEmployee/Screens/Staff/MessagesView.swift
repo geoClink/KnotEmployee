@@ -31,6 +31,7 @@ struct MessagesView: View {
             .background(theme.cream.ignoresSafeArea())
             .navigationTitle("Messages")
             .task { await store.reloadThreads() }
+            .refreshable { await store.reloadThreads() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showCompose = true } label: {

@@ -99,9 +99,12 @@ struct StaffMoreView: View {
 struct RootGate: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     var body: some View {
         Group {
-            if store.isResettingPassword {
+            if !hasSeenOnboarding {
+                OnboardingView()
+            } else if store.isResettingPassword {
                 ResetPasswordView()
             } else if store.isAuthenticated && store.isLoading {
                 loadingScreen

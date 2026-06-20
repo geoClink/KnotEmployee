@@ -7,6 +7,7 @@ class KnotAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenter
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        CrashReporter.shared.start()
         return true
     }
 

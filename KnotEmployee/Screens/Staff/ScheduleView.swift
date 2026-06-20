@@ -54,6 +54,7 @@ struct ScheduleView: View {
             .sheet(isPresented: $showNewSwap) { NewSwapView() }
             .sheet(isPresented: $showNewTimeOff) { NewTimeOffView() }
             .navigationTitle("Schedule")
+            .refreshable { weekShifts = await store.fetchShiftsForWeek(weekStart: weekStart) }
             .task(id: weekOffset) {
                 weekShifts = await store.fetchShiftsForWeek(weekStart: weekStart)
             }
