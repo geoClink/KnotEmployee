@@ -43,11 +43,8 @@ struct ManagerTabView: View {
             ManagerMessagesView()
                 .tabItem { Label("Messages", systemImage: "bubble.left") }
                 .badge(store.unreadMessageCount).tag(3)
-            NavigationStack { NotificationsView() }
-                .tabItem { Label("Alerts", systemImage: "bell") }
-                .badge(store.unreadNotificationCount).tag(4)
-            SettingsView()
-                .tabItem { Label("Settings", systemImage: "gearshape") }.tag(5)
+            NavigationStack { SettingsView() }
+                .tabItem { Label("Settings", systemImage: "gearshape") }.tag(4)
         }
         .tint(theme.rose)
     }

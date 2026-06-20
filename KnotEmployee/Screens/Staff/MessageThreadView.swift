@@ -6,11 +6,15 @@ struct MessageThreadView: View {
     let thread: MessageThread
     @State private var newMessage = ""
 
+    private var currentThread: MessageThread {
+        store.threads.first { $0.id == thread.id } ?? thread
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 8) {
-                    ForEach(thread.messages) { message in
+                    ForEach(currentThread.messages) { message in
                         DirectMessageBubble(message: message)
                     }
                 }
@@ -19,9 +23,9 @@ struct MessageThreadView: View {
             inputBar
         }
         .background(theme.cream.ignoresSafeArea())
-        .navigationTitle(thread.participantName)
+        .navigationTitle(currentThread.participantName)
         .navigationBarTitleDisplayMode(.inline)
-        .task { if let id = thread.dbId { store.markThreadRead(dbId: id) } }
+        .task { if let id = currentThread.dbId { store.markThreadRead(dbId: id) } }
     }
 
     private var inputBar: some View {

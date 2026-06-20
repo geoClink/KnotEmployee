@@ -6,48 +6,46 @@ struct TimeOffView: View {
     @State private var showNewRequest = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    balancePills
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                balancePills
 
-                    if store.timeOff.isEmpty {
-                        emptyState
-                    } else {
-                        section("Requests") {
-                            VStack(spacing: 10) {
-                                ForEach(store.timeOff) { request in
-                                    TimeOffRequestRow(request: request)
-                                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                            if request.status == .pending {
-                                                Button(role: .destructive) {
-                                                    Task { await store.cancelTimeOff(id: request.id) }
-                                                } label: {
-                                                    Label("Cancel", systemImage: "xmark")
-                                                }
+                if store.timeOff.isEmpty {
+                    emptyState
+                } else {
+                    section("Requests") {
+                        VStack(spacing: 10) {
+                            ForEach(store.timeOff) { request in
+                                TimeOffRequestRow(request: request)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                        if request.status == .pending {
+                                            Button(role: .destructive) {
+                                                Task { await store.cancelTimeOff(id: request.id) }
+                                            } label: {
+                                                Label("Cancel", systemImage: "xmark")
                                             }
                                         }
-                                }
+                                    }
                             }
                         }
                     }
                 }
-                .padding(20)
             }
-            .refreshable { try? await store.loadInitialData() }
-            .background(theme.cream.ignoresSafeArea())
-            .navigationTitle("Time off")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showNewRequest = true } label: {
-                        IconView(icon: .plus, size: 22, color: theme.rose)
-                    }
-                    .accessibilityLabel("New time off request")
+            .padding(20)
+        }
+        .refreshable { try? await store.loadInitialData() }
+        .background(theme.cream.ignoresSafeArea())
+        .navigationTitle("Time off")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showNewRequest = true } label: {
+                    IconView(icon: .plus, size: 22, color: theme.rose)
                 }
+                .accessibilityLabel("New time off request")
             }
-            .sheet(isPresented: $showNewRequest) {
-                NewTimeOffView()
-            }
+        }
+        .sheet(isPresented: $showNewRequest) {
+            NewTimeOffView()
         }
     }
 

@@ -21,6 +21,20 @@ struct ManagerHomeView: View {
             }
             .background(theme.cream.ignoresSafeArea())
             .task { await store.fetchLaborMetrics() }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink { NotificationsView() } label: {
+                        IconView(icon: .bell, size: 22, color: theme.ink)
+                            .overlay(alignment: .topTrailing) {
+                                if store.unreadNotificationCount > 0 {
+                                    Circle().fill(theme.rose).frame(width: 8, height: 8)
+                                        .offset(x: 2, y: -2)
+                                }
+                            }
+                    }
+                    .accessibilityLabel("Notifications\(store.unreadNotificationCount > 0 ? ", \(store.unreadNotificationCount) unread" : "")")
+                }
+            }
         }
     }
 

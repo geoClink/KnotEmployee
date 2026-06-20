@@ -6,43 +6,41 @@ struct SwapRequestsView: View {
     @State private var showNewSwap = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                if store.swaps.isEmpty {
-                    emptyState
-                } else {
-                    VStack(spacing: 10) {
-                        ForEach(store.swaps) { swap in
-                            SwapRequestRow(swap: swap)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    if swap.status == .pending && swap.direction == .outgoing {
-                                        Button(role: .destructive) {
-                                            Task { await store.cancelSwap(id: swap.id) }
-                                        } label: {
-                                            Label("Cancel", systemImage: "xmark")
-                                        }
+        ScrollView {
+            if store.swaps.isEmpty {
+                emptyState
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(store.swaps) { swap in
+                        SwapRequestRow(swap: swap)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                if swap.status == .pending && swap.direction == .outgoing {
+                                    Button(role: .destructive) {
+                                        Task { await store.cancelSwap(id: swap.id) }
+                                    } label: {
+                                        Label("Cancel", systemImage: "xmark")
                                     }
                                 }
-                        }
-                        footerNote
+                            }
                     }
-                    .padding(20)
+                    footerNote
                 }
+                .padding(20)
             }
-            .background(theme.cream.ignoresSafeArea())
-            .navigationTitle("Swap requests")
-            .refreshable { try? await store.loadInitialData() }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showNewSwap = true } label: {
-                        IconView(icon: .plus, size: 22, color: theme.rose)
-                    }
-                    .accessibilityLabel("New swap request")
+        }
+        .background(theme.cream.ignoresSafeArea())
+        .navigationTitle("Swap requests")
+        .refreshable { try? await store.loadInitialData() }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showNewSwap = true } label: {
+                    IconView(icon: .plus, size: 22, color: theme.rose)
                 }
+                .accessibilityLabel("New swap request")
             }
-            .sheet(isPresented: $showNewSwap) {
-                NewSwapView()
-            }
+        }
+        .sheet(isPresented: $showNewSwap) {
+            NewSwapView()
         }
     }
 

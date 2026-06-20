@@ -13,7 +13,7 @@ struct LoginView: View {
             Spacer()
 
             VStack(spacing: 8) {
-                Text("THE BAKERY CO.").font(theme.mono(11)).foregroundStyle(theme.rose).tracking(3)
+                Text(theme.name.uppercased()).font(theme.mono(11)).foregroundStyle(theme.rose).tracking(3)
                 Text("Welcome back").font(theme.display(30)).foregroundStyle(theme.ink)
             }
             .padding(.bottom, 36)

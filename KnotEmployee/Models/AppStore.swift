@@ -668,18 +668,19 @@ struct ScheduleTemplate: Identifiable {
         let cal = Calendar.current; let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
         let dayNames = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
         struct ShiftUpsert: Encodable {
-            let employeeId: UUID; let day, shiftDate, startTime, endTime, role: String
+            let employeeId: UUID; let day, shiftDate, startTime, endTime, role, tenantId: String
             enum CodingKeys: String, CodingKey {
                 case employeeId = "employee_id"; case day
                 case shiftDate = "shift_date"; case startTime = "start_time"
-                case endTime = "end_time"; case role
+                case endTime = "end_time"; case role; case tenantId = "tenant_id"
             }
         }
         let upserts = rows.map { ts -> ShiftUpsert in
             let date = cal.date(byAdding: .day, value: ts.dayOfWeek, to: weekStart)!
             return ShiftUpsert(employeeId: ts.employeeId, day: dayNames[ts.dayOfWeek],
                                shiftDate: df.string(from: date),
-                               startTime: ts.startTime, endTime: ts.endTime, role: ts.role)
+                               startTime: ts.startTime, endTime: ts.endTime, role: ts.role,
+                               tenantId: Config.tenantId)
         }
         try? await supabase.from("kn_shifts")
             .upsert(upserts, onConflict: "employee_id,shift_date").execute()
@@ -953,7 +954,10 @@ struct ScheduleTemplate: Identifiable {
     func fetchLaborBudget() async {
         struct Row: Decodable { let value: String }
         if let row: Row = try? await supabase.from("kn_settings")
-            .select("value").eq("key", value: "weekly_labor_budget").single().execute().value {
+            .select("value")
+            .eq("key", value: "weekly_labor_budget")
+            .eq("tenant_id", value: Config.tenantId)
+            .single().execute().value {
             weeklyLaborBudget = Double(row.value) ?? 0
         }
     }
@@ -961,7 +965,7 @@ struct ScheduleTemplate: Identifiable {
     func saveLaborBudget(_ budget: Double) async {
         weeklyLaborBudget = budget
         try? await supabase.from("kn_settings")
-            .upsert(["key": "weekly_labor_budget", "value": String(budget)], onConflict: "key")
+            .upsert(["key": "weekly_labor_budget", "value": String(budget), "tenant_id": Config.tenantId], onConflict: "key,tenant_id")
             .execute()
     }
 
@@ -1135,18 +1139,19 @@ struct ScheduleTemplate: Identifiable {
         let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
         let tf = DateFormatter(); tf.dateFormat = "HH:mm"
         struct Upsert: Encodable {
-            let employeeId, day, shiftDate, startTime, endTime, role, status: String
+            let employeeId, day, shiftDate, startTime, endTime, role, status, tenantId: String
             let note: String?
             enum CodingKeys: String, CodingKey {
                 case employeeId = "employee_id"; case day, role, status, note
                 case shiftDate = "shift_date"; case startTime = "start_time"; case endTime = "end_time"
+                case tenantId = "tenant_id"
             }
         }
         let row = Upsert(employeeId: employeeId.uuidString, day: days[dayIndex],
                          shiftDate: df.string(from: shiftDate),
                          startTime: tf.string(from: start), endTime: tf.string(from: end),
                          role: role.isEmpty ? "Staff" : role, status: "scheduled",
-                         note: note.isEmpty ? nil : note)
+                         note: note.isEmpty ? nil : note, tenantId: Config.tenantId)
         do {
             try await supabase.from("kn_shifts")
                 .upsert(row, onConflict: "employee_id,shift_date").execute()

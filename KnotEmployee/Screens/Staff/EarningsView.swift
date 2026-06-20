@@ -8,33 +8,31 @@ struct EarningsView: View {
     private var totalGross: Double { store.earningsShifts.reduce(0) { $0 + $1.gross } }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    heroCard
-                    if store.earningsShifts.isEmpty {
-                        Text("No hours recorded this week.")
-                            .font(theme.body(14)).foregroundStyle(theme.inkMuted)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, 20)
-                    } else {
-                        section("This week") {
-                            VStack(spacing: 10) {
-                                ForEach(store.earningsShifts) { shift in
-                                    EarningsRow(shift: shift)
-                                }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                heroCard
+                if store.earningsShifts.isEmpty {
+                    Text("No hours recorded this week.")
+                        .font(theme.body(14)).foregroundStyle(theme.inkMuted)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 20)
+                } else {
+                    section("This week") {
+                        VStack(spacing: 10) {
+                            ForEach(store.earningsShifts) { shift in
+                                EarningsRow(shift: shift)
                             }
                         }
                     }
-                    disclaimer
                 }
-                .padding(20)
+                disclaimer
             }
-            .background(theme.cream.ignoresSafeArea())
-            .navigationTitle("Earnings")
-            .task { await store.fetchEarnings() }
-            .refreshable { await store.fetchEarnings() }
+            .padding(20)
         }
+        .background(theme.cream.ignoresSafeArea())
+        .navigationTitle("Earnings")
+        .task { await store.fetchEarnings() }
+        .refreshable { await store.fetchEarnings() }
     }
 
     private var heroCard: some View {

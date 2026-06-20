@@ -7,69 +7,67 @@ struct SettingsView: View {
     @AppStorage("notifShifts") private var notifShifts = true
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 22) {
-                    profileCard
+        ScrollView {
+            VStack(spacing: 22) {
+                profileCard
 
-                    group("Notifications") {
-                        toggleRow(.calendar, "Shift reminders", $notifShifts)
-                            .onChange(of: notifShifts) { store.scheduleShiftReminders() }
-                    }
-
-                    group("App") {
-                        NavigationLink { AccountView() } label: { navRowContent(.user, "Account") }
-                            .buttonStyle(.plain)
-                        divider
-                        NavigationLink { AvailabilityView() } label: { navRowContent(.calendar, "My availability") }
-                            .buttonStyle(.plain)
-                        divider
-                        NavigationLink { ChangePINView() } label: { navRowContent(.lock, "Change password") }
-                            .buttonStyle(.plain)
-                        divider
-                        valueRow(.bell, "Version", "1.0.0 (Phase 0)")
-                        divider
-                        Link(destination: URL(string: "https://chstudiosdetroit.com/knotemployee/privacy.html")!) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "hand.raised.fill")
-                                    .font(.system(size: 17)).foregroundStyle(theme.inkSoft)
-                                    .frame(width: 30, height: 30)
-                                    .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: 7))
-                                Text("Privacy policy").font(theme.body(15)).foregroundStyle(theme.ink)
-                                Spacer()
-                                IconView(icon: .chevronRight, size: 18, color: theme.inkFaint)
-                            }
-                            .padding(.horizontal, 14).padding(.vertical, 11)
-                        }
-                        .buttonStyle(.plain)
-                        divider
-                        Link(destination: URL(string: "https://chstudiosdetroit.com/knotemployee/terms.html")!) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "doc.text.fill")
-                                    .font(.system(size: 17)).foregroundStyle(theme.inkSoft)
-                                    .frame(width: 30, height: 30)
-                                    .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: 7))
-                                Text("Terms of service").font(theme.body(15)).foregroundStyle(theme.ink)
-                                Spacer()
-                                IconView(icon: .chevronRight, size: 18, color: theme.inkFaint)
-                            }
-                            .padding(.horizontal, 14).padding(.vertical, 11)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    
-                    Button { store.signOut() } label: {
-                                            Text("Sign out")
-                                                .font(theme.bodyMedium(15)).foregroundStyle(theme.roseDeep)
-                                                .frame(maxWidth: .infinity).padding(.vertical, 14)
-                                        }
-                                        .buttonStyle(.plain)
+                group("Notifications") {
+                    toggleRow(.calendar, "Shift reminders", $notifShifts)
+                        .onChange(of: notifShifts) { store.scheduleShiftReminders() }
                 }
-                .padding(20)
+
+                group("App") {
+                    NavigationLink { AccountView() } label: { navRowContent(.user, "Account") }
+                        .buttonStyle(.plain)
+                    divider
+                    NavigationLink { AvailabilityView() } label: { navRowContent(.calendar, "My availability") }
+                        .buttonStyle(.plain)
+                    divider
+                    NavigationLink { ChangePINView() } label: { navRowContent(.lock, "Change password") }
+                        .buttonStyle(.plain)
+                    divider
+                    valueRow(.bell, "Version", "1.0.0 (Phase 0)")
+                    divider
+                    Link(destination: URL(string: "https://chstudiosdetroit.com/knotemployee/privacy.html")!) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "hand.raised.fill")
+                                .font(.system(size: 17)).foregroundStyle(theme.inkSoft)
+                                .frame(width: 30, height: 30)
+                                .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: 7))
+                            Text("Privacy policy").font(theme.body(15)).foregroundStyle(theme.ink)
+                            Spacer()
+                            IconView(icon: .chevronRight, size: 18, color: theme.inkFaint)
+                        }
+                        .padding(.horizontal, 14).padding(.vertical, 11)
+                    }
+                    .buttonStyle(.plain)
+                    divider
+                    Link(destination: URL(string: "https://chstudiosdetroit.com/knotemployee/terms.html")!) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "doc.text.fill")
+                                .font(.system(size: 17)).foregroundStyle(theme.inkSoft)
+                                .frame(width: 30, height: 30)
+                                .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: 7))
+                            Text("Terms of service").font(theme.body(15)).foregroundStyle(theme.ink)
+                            Spacer()
+                            IconView(icon: .chevronRight, size: 18, color: theme.inkFaint)
+                        }
+                        .padding(.horizontal, 14).padding(.vertical, 11)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Button { store.signOut() } label: {
+                    Text("Sign out")
+                        .font(theme.bodyMedium(15)).foregroundStyle(theme.roseDeep)
+                        .frame(maxWidth: .infinity).padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
             }
-            .background(theme.cream.ignoresSafeArea())
-            .navigationTitle("Settings")
+            .padding(20)
         }
+        .background(theme.cream.ignoresSafeArea())
+        .navigationTitle("Settings")
     }
 
     private var profileCard: some View {
