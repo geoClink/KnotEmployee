@@ -51,12 +51,19 @@ struct TimeOffView: View {
         }
     }
 
+    private var sickDaysUsed: Int {
+        store.timeOff.filter { $0.kind == .sick && $0.status == .approved }.reduce(0) { $0 + $1.days }
+    }
+    private var personalDaysUsed: Int {
+        store.timeOff.filter { $0.kind == .personal && $0.status == .approved }.reduce(0) { $0 + $1.days }
+    }
+
     private var balancePills: some View {
         let pto = store.currentUser.ptoDaysRemaining
         return HStack(spacing: 8) {
             balancePill("PTO", pto == 1 ? "1 day" : "\(Int(pto)) days")
-            balancePill("Sick", "—")
-            balancePill("Personal", "—")
+            balancePill("Sick", sickDaysUsed == 0 ? "None used" : "\(sickDaysUsed) days")
+            balancePill("Personal", personalDaysUsed == 0 ? "None used" : "\(personalDaysUsed) days")
         }
     }
 

@@ -57,6 +57,9 @@ struct ScheduleView: View {
             .task(id: weekOffset) {
                 weekShifts = await store.fetchShiftsForWeek(weekStart: weekStart)
             }
+            .onChange(of: store.shift) {
+                Task { weekShifts = await store.fetchShiftsForWeek(weekStart: weekStart) }
+            }
         }
     }
 

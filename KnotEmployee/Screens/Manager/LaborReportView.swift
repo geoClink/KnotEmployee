@@ -4,13 +4,12 @@ struct LaborReportView: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
 
-    @AppStorage("weeklyLaborBudget") private var weeklyBudget: Double = 0
     @State private var showBudgetInput = false
     @State private var budgetInput = ""
 
     private var totalActual: Double { store.laborReport.reduce(0) { $0 + $1.actual } }
     private var totalBudget: Double {
-        weeklyBudget > 0 ? weeklyBudget : store.laborReport.reduce(0) { $0 + $1.budget }
+        store.weeklyLaborBudget > 0 ? store.weeklyLaborBudget : store.laborReport.reduce(0) { $0 + $1.budget }
     }
     private var totalHours: Double { store.staff.reduce(0) { $0 + $1.hoursThisWeek } }
 
@@ -47,7 +46,7 @@ struct LaborReportView: View {
         HStack(spacing: 8) {
             statTile("Total labor", "$\(Int(totalActual))")
             Button {
-                budgetInput = weeklyBudget > 0 ? String(Int(weeklyBudget)) : ""
+                budgetInput = store.weeklyLaborBudget > 0 ? String(Int(store.weeklyLaborBudget)) : ""
                 showBudgetInput = true
             } label: {
                 VStack(spacing: 2) {
@@ -67,9 +66,9 @@ struct LaborReportView: View {
             .alert("Set weekly budget", isPresented: $showBudgetInput) {
                 TextField("e.g. 3000", text: $budgetInput).keyboardType(.numberPad)
                 Button("Save") {
-                    weeklyBudget = Double(budgetInput) ?? 0
+                    Task { await store.saveLaborBudget(Double(budgetInput) ?? 0) }
                 }
-                Button("Clear") { weeklyBudget = 0 }
+                Button("Clear") { Task { await store.saveLaborBudget(0) } }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Enter a total labor budget for the week. Leave blank to use the default estimate (115% of scheduled cost).")

@@ -46,7 +46,8 @@ struct ManagerTabView: View {
             NavigationStack { NotificationsView() }
                 .tabItem { Label("Alerts", systemImage: "bell") }
                 .badge(store.unreadNotificationCount).tag(4)
-            ManagerMoreView().tabItem { Label("More", systemImage: "ellipsis") }.tag(5)
+            SettingsView()
+                .tabItem { Label("Settings", systemImage: "gearshape") }.tag(5)
         }
         .tint(theme.rose)
     }
@@ -68,6 +69,8 @@ struct StaffMoreView: View {
             }
             .background(theme.cream.ignoresSafeArea())
             .navigationTitle("More")
+            .toolbarBackground(theme.cream, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
     }
 
@@ -92,40 +95,6 @@ struct StaffMoreView: View {
 }
 
 
-struct ManagerMoreView: View {
-    @Environment(\.knotTheme) private var theme
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 8) {
-                    moreLink(icon: .gear, title: "Settings") { SettingsView() }
-                }
-                .padding(20)
-            }
-            .background(theme.cream.ignoresSafeArea())
-            .navigationTitle("More")
-        }
-    }
-
-    private func moreLink<D: View>(icon: KnotIcon, title: String, @ViewBuilder destination: () -> D) -> some View {
-        NavigationLink {
-            destination()
-        } label: {
-            HStack(spacing: 12) {
-                IconView(icon: icon, size: 20, color: theme.inkSoft)
-                    .frame(width: 40, height: 40)
-                    .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: theme.rCard))
-                Text(title).font(theme.bodyMedium(15)).foregroundStyle(theme.ink)
-                Spacer()
-                IconView(icon: .chevronRight, size: 16, color: theme.inkFaint)
-            }
-            .knotCard(padding: 12)
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-    }
-}
 
 struct RootGate: View {
     @Environment(\.knotTheme) private var theme

@@ -5,10 +5,7 @@ struct SettingsView: View {
     @Environment(AppStore.self) private var store
 
     @AppStorage("notifShifts") private var notifShifts = true
-    @AppStorage("notifSwaps") private var notifSwaps = true
-    @AppStorage("notifMessages") private var notifMessages = true
-    @AppStorage("notifPay") private var notifPay = false
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -18,12 +15,6 @@ struct SettingsView: View {
                     group("Notifications") {
                         toggleRow(.calendar, "Shift reminders", $notifShifts)
                             .onChange(of: notifShifts) { store.scheduleShiftReminders() }
-                        divider
-                        toggleRow(.swap, "Swap requests", $notifSwaps)
-                        divider
-                        toggleRow(.message, "Messages", $notifMessages)
-                        divider
-                        toggleRow(.dollar, "Pay & earnings", $notifPay)
                     }
 
                     group("App") {
@@ -37,6 +28,20 @@ struct SettingsView: View {
                             .buttonStyle(.plain)
                         divider
                         valueRow(.bell, "Version", "1.0.0 (Phase 0)")
+                        divider
+                        Link(destination: URL(string: "https://chstudiosdetroit.com/knotemployee-privacy.html")!) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "hand.raised.fill")
+                                    .font(.system(size: 17)).foregroundStyle(theme.inkSoft)
+                                    .frame(width: 30, height: 30)
+                                    .background(theme.creamDeep, in: RoundedRectangle(cornerRadius: 7))
+                                Text("Privacy policy").font(theme.body(15)).foregroundStyle(theme.ink)
+                                Spacer()
+                                IconView(icon: .chevronRight, size: 18, color: theme.inkFaint)
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 11)
+                        }
+                        .buttonStyle(.plain)
                     }
                     
                     Button { store.signOut() } label: {

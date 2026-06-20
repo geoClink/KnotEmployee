@@ -71,6 +71,7 @@ struct ScheduleTemplate: Identifiable {
     private let networkMonitor = NWPathMonitor()
     var isOffline = false
     var selectedTab = 0
+    var weeklyLaborBudget: Double = 0
 
     var computedAlerts: [ManagerAlert] {
         var result: [ManagerAlert] = []
@@ -170,6 +171,7 @@ struct ScheduleTemplate: Identifiable {
             currentUser = .placeholder
             staff = []; shift = []; openShifts = []; swaps = []
             timeOff = []; threads = []; notifications = []
+            selectedTab = 0
             isAuthenticated = false
         }
     }
@@ -344,7 +346,7 @@ struct ScheduleTemplate: Identifiable {
         await fetchAllStaffAvailability()
         subscribeToRealtime()
         scheduleShiftReminders()
-        if isManager { await fetchLaborReport() }
+        if isManager { await fetchLaborReport(); await fetchLaborMetrics(); await fetchLaborBudget() }
     }
 
     private func restoreClockState() async {
@@ -420,12 +422,11 @@ struct ScheduleTemplate: Identifiable {
 
     private func fetchSwaps() async throws -> [Swap] {
         let uid = currentUser.id.uuidString
-        let rows: [DBSwap] = try await supabase
-            .from("kn_swaps")
-            .select()
-            .or("from_employee_id.eq.\(uid),with_employee_id.eq.\(uid)")
-            .execute()
-            .value
+        var query = supabase.from("kn_swaps").select()
+        if !isManager {
+            query = query.or("from_employee_id.eq.\(uid),with_employee_id.eq.\(uid)")
+        }
+        let rows: [DBSwap] = try await query.execute().value
         return rows.map { row in
             let fromName = staff.first(where: { $0.id == row.fromEmployeeId })?.name ?? "Staff"
             let withName = staff.first(where: { $0.id == row.withEmployeeId })?.name ?? "Staff"
@@ -721,11 +722,14 @@ struct ScheduleTemplate: Identifiable {
         realtimeTask = nil
     }
 
-    private func handleIncomingMessage(_ insert: InsertAction) {
+    private func handleIncomingMessage(_ insert: InsertAction) async {
         let r = insert.record
         guard let threadIdStr = r["thread_id"]?.stringValue,
               let threadId = UUID(uuidString: threadIdStr) else { return }
-        guard let i = threads.firstIndex(where: { $0.dbId == threadId }) else { return }
+        guard let i = threads.firstIndex(where: { $0.dbId == threadId }) else {
+            await reloadThreads()
+            return
+        }
         let senderIdStr = r["sender_id"]?.stringValue ?? ""
         let isMe = senderIdStr == currentUser.id.uuidString
         let text = r["text"]?.stringValue ?? ""
@@ -928,6 +932,21 @@ struct ScheduleTemplate: Identifiable {
 
     func reloadShifts() async {
         if let fresh = try? await fetchShifts() { shift = fresh }
+    }
+
+    func fetchLaborBudget() async {
+        struct Row: Decodable { let value: String }
+        if let row: Row = try? await supabase.from("kn_settings")
+            .select("value").eq("key", value: "weekly_labor_budget").single().execute().value {
+            weeklyLaborBudget = Double(row.value) ?? 0
+        }
+    }
+
+    func saveLaborBudget(_ budget: Double) async {
+        weeklyLaborBudget = budget
+        try? await supabase.from("kn_settings")
+            .upsert(["key": "weekly_labor_budget", "value": String(budget)], onConflict: "key")
+            .execute()
     }
 
     func handleNotificationTap(category: String) {
