@@ -99,6 +99,7 @@ struct StaffMoreView: View {
 struct RootGate: View {
     @Environment(\.knotTheme) private var theme
     @Environment(AppStore.self) private var store
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     var body: some View {
         Group {
@@ -127,6 +128,23 @@ struct RootGate: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
+        .overlay {
+            if scenePhase != .active && store.isAuthenticated {
+                theme.cream.ignoresSafeArea()
+                    .overlay {
+                        VStack(spacing: 14) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 32))
+                                .foregroundStyle(theme.inkFaint)
+                            Text(theme.name)
+                                .font(theme.display(22))
+                                .foregroundStyle(theme.inkMuted)
+                        }
+                    }
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.15), value: scenePhase)
         .animation(.easeInOut(duration: 0.3), value: store.isOffline)
         .alert("Something went wrong", isPresented: Binding(
             get: { store.errorMessage != nil },

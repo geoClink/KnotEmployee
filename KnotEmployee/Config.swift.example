@@ -1,0 +1,6 @@
+// Copy this file to Config.swift and fill in your Supabase project credentials.
+// Config.swift is gitignored — never commit real keys.
+enum Config {
+    static let supabaseURL = "https://your-project-id.supabase.co"
+    static let supabaseKey = "your-anon-public-key"
+}

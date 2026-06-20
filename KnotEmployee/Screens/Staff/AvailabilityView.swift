@@ -56,7 +56,7 @@ struct AvailabilityView: View {
         .background(theme.cream.ignoresSafeArea())
         .navigationTitle("Availability")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { availability = store.availability }
+        .task { availability = store.availability }
     }
 
     private var infoCard: some View {
