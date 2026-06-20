@@ -37,9 +37,16 @@ struct KnotEmployeeApp: App {
     @State private var store = AppStore()
 
     init() {
+        let cream = UIColor { t in t.userInterfaceStyle == .dark
+            ? UIColor(red: 0x1A/255, green: 0x0E/255, blue: 0x08/255, alpha: 1)
+            : UIColor(red: 0xF4/255, green: 0xEC/255, blue: 0xDD/255, alpha: 1) }
+        let ink = UIColor { t in t.userInterfaceStyle == .dark
+            ? UIColor(red: 0xF2/255, green: 0xE8/255, blue: 0xD8/255, alpha: 1)
+            : UIColor(red: 0x2A/255, green: 0x18/255, blue: 0x10/255, alpha: 1) }
+
         let appearance = UINavigationBarAppearance()
-        appearance.configureWithDefaultBackground()
-        let ink = UIColor(red: 0x2A/255, green: 0x18/255, blue: 0x10/255, alpha: 1)
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = cream
         if let large = UIFont(name: "CormorantGaramond-Medium", size: 36) {
             appearance.largeTitleTextAttributes = [.font: large, .foregroundColor: ink]
         }
