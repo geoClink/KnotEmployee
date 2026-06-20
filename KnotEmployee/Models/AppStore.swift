@@ -230,20 +230,21 @@ struct ScheduleTemplate: Identifiable {
             )
 
             struct NewEmployee: Encodable {
-                let name, role: String
+                let name, role, tenantId: String
                 let permissionLevel: Int
                 let hourlyRate: Double
                 let active: Bool
                 let userId: UUID
                 enum CodingKeys: String, CodingKey {
                     case name, role, active
+                    case tenantId = "tenant_id"
                     case permissionLevel = "permission_level"
                     case hourlyRate = "hourly_rate"
                     case userId = "user_id"
                 }
             }
             try await supabase.from("employees")
-                .insert(NewEmployee(name: name, role: jobTitle,
+                .insert(NewEmployee(name: name, role: jobTitle, tenantId: Config.tenantId,
                                     permissionLevel: isManager ? 2 : 1,
                                     hourlyRate: hourlyRate, active: true, userId: newUserId))
                 .execute()
@@ -292,7 +293,8 @@ struct ScheduleTemplate: Identifiable {
         Task {
             try? await supabase.from("device_tokens")
                 .upsert(["employee_id": currentUser.id.uuidString,
-                         "token": token, "platform": "apns"],
+                         "token": token, "platform": "apns",
+                         "tenant_id": Config.tenantId],
                         onConflict: "employee_id")
                 .execute()
         }
@@ -525,7 +527,8 @@ struct ScheduleTemplate: Identifiable {
         clockState = .clockedIn
         clockInAt = Date()
         Task { try? await supabase.from("clock_events")
-            .insert(["employee_id": currentUser.id.uuidString, "event_type": "clock_in"])
+            .insert(["employee_id": currentUser.id.uuidString, "event_type": "clock_in",
+                     "tenant_id": Config.tenantId])
             .execute() }
     }
 
@@ -533,7 +536,8 @@ struct ScheduleTemplate: Identifiable {
         clockState = .out
         clockInAt = nil
         Task { try? await supabase.from("clock_events")
-            .insert(["employee_id": currentUser.id.uuidString, "event_type": "clock_out"])
+            .insert(["employee_id": currentUser.id.uuidString, "event_type": "clock_out",
+                     "tenant_id": Config.tenantId])
             .execute() }
     }
 
@@ -580,12 +584,14 @@ struct ScheduleTemplate: Identifiable {
     func saveAvailability(_ avail: [Bool]) async {
         availability = avail
         struct Row: Encodable {
-            let employeeId: String; let dayOfWeek: Int; let available: Bool
+            let employeeId, tenantId: String; let dayOfWeek: Int; let available: Bool
             enum CodingKeys: String, CodingKey {
-                case employeeId = "employee_id"; case dayOfWeek = "day_of_week"; case available
+                case employeeId = "employee_id"; case tenantId = "tenant_id"
+                case dayOfWeek = "day_of_week"; case available
             }
         }
         let rows = avail.enumerated().map { Row(employeeId: currentUser.id.uuidString,
+                                                tenantId: Config.tenantId,
                                                 dayOfWeek: $0.offset, available: $0.element) }
         try? await supabase.from("kn_availability")
             .upsert(rows, onConflict: "employee_id,day_of_week").execute()
@@ -621,24 +627,28 @@ struct ScheduleTemplate: Identifiable {
             .gte("shift_date", value: df.string(from: weekStart))
             .lte("shift_date", value: df.string(from: weekEnd))
             .execute().value else { return }
-        struct NewTemplate: Encodable { let name: String }
+        struct NewTemplate: Encodable {
+            let name, tenantId: String
+            enum CodingKeys: String, CodingKey { case name; case tenantId = "tenant_id" }
+        }
         struct CreatedTemplate: Decodable { let id: UUID }
         guard let created: CreatedTemplate = try? await supabase.from("kn_schedule_templates")
-            .insert(NewTemplate(name: name)).select("id").single().execute().value else { return }
+            .insert(NewTemplate(name: name, tenantId: Config.tenantId)).select("id").single().execute().value else { return }
         struct TemplateShift: Encodable {
             let templateId: UUID; let employeeId: UUID; let dayOfWeek: Int
-            let startTime, endTime, role: String
+            let startTime, endTime, role, tenantId: String
             enum CodingKeys: String, CodingKey {
                 case templateId = "template_id"; case employeeId = "employee_id"
                 case dayOfWeek = "day_of_week"; case startTime = "start_time"
-                case endTime = "end_time"; case role
+                case endTime = "end_time"; case role; case tenantId = "tenant_id"
             }
         }
         let dayMap = ["Mon": 0, "Tue": 1, "Wed": 2, "Thu": 3, "Fri": 4, "Sat": 5, "Sun": 6]
         let rows = shifts.compactMap { s -> TemplateShift? in
             guard let dow = dayMap[s.day] else { return nil }
             return TemplateShift(templateId: created.id, employeeId: s.employeeId,
-                                 dayOfWeek: dow, startTime: s.startTime, endTime: s.endTime, role: s.role)
+                                 dayOfWeek: dow, startTime: s.startTime, endTime: s.endTime,
+                                 role: s.role, tenantId: Config.tenantId)
         }
         try? await supabase.from("kn_template_shifts").insert(rows).execute()
         await fetchTemplates()
@@ -746,14 +756,16 @@ struct ScheduleTemplate: Identifiable {
     func startBreak() {
         clockState = .onBreak
         Task { try? await supabase.from("clock_events")
-            .insert(["employee_id": currentUser.id.uuidString, "event_type": "break_start"])
+            .insert(["employee_id": currentUser.id.uuidString, "event_type": "break_start",
+                     "tenant_id": Config.tenantId])
             .execute() }
     }
 
     func endBreak() {
         clockState = .clockedIn
         Task { try? await supabase.from("clock_events")
-            .insert(["employee_id": currentUser.id.uuidString, "event_type": "break_end"])
+            .insert(["employee_id": currentUser.id.uuidString, "event_type": "break_end",
+                     "tenant_id": Config.tenantId])
             .execute() }
     }
 
@@ -762,19 +774,21 @@ struct ScheduleTemplate: Identifiable {
             self.shift[i].status = .offered
         }
         struct Insert: Encodable {
-            let offeredById, day, shiftDate, startTime, endTime, role, status: String
+            let offeredById, day, shiftDate, startTime, endTime, role, status, tenantId: String
             enum CodingKeys: String, CodingKey {
                 case offeredById = "offered_by_id"
                 case day, status, role
                 case shiftDate  = "shift_date"
                 case startTime  = "start_time"
                 case endTime    = "end_time"
+                case tenantId   = "tenant_id"
             }
         }
         do {
             let row = Insert(offeredById: currentUser.id.uuidString, day: shift.day,
                              shiftDate: shift.shiftDate, startTime: shift.start,
-                             endTime: shift.end, role: shift.role, status: "open")
+                             endTime: shift.end, role: shift.role, status: "open",
+                             tenantId: Config.tenantId)
             try await supabase.from("kn_open_shifts").insert(row).execute()
             try await supabase.from("kn_shifts")
                 .update(["status": "offered"])
@@ -786,20 +800,22 @@ struct ScheduleTemplate: Identifiable {
 
     func submitTimeOff(kind: TimeOff.Kind, startDate: Date, endDate: Date, note: String?) async throws {
         struct Insert: Encodable {
-            let employeeId, kind, status, startDate, endDate: String
+            let employeeId, kind, status, startDate, endDate, tenantId: String
             let note: String?
             enum CodingKeys: String, CodingKey {
                 case employeeId = "employee_id"
                 case kind, status, note
                 case startDate = "start_date"
                 case endDate   = "end_date"
+                case tenantId  = "tenant_id"
             }
         }
         let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
         let row = Insert(employeeId: currentUser.id.uuidString, kind: kind.rawValue,
                          status: "pending", startDate: df.string(from: startDate),
                          endDate: df.string(from: endDate),
-                         note: note?.isEmpty == true ? nil : note)
+                         note: note?.isEmpty == true ? nil : note,
+                         tenantId: Config.tenantId)
         try await supabase.from("kn_time_off").insert(row).execute()
         if let fresh = try? await fetchTimeOff() { timeOff = fresh }
         let displayFmt = DateFormatter(); displayFmt.dateFormat = "MMM d"
@@ -993,13 +1009,15 @@ struct ScheduleTemplate: Identifiable {
         let managers = staff.filter { $0.role == .manager }
         guard !managers.isEmpty else { return }
         struct NotifInsert: Encodable {
-            let employeeId, icon, title, body, category: String
+            let employeeId, icon, title, body, category, tenantId: String
             enum CodingKeys: String, CodingKey {
                 case employeeId = "employee_id"; case icon, title, body, category
+                case tenantId = "tenant_id"
             }
         }
         let rows = managers.map {
-            NotifInsert(employeeId: $0.id.uuidString, icon: icon, title: title, body: body, category: category)
+            NotifInsert(employeeId: $0.id.uuidString, icon: icon, title: title, body: body,
+                        category: category, tenantId: Config.tenantId)
         }
         try? await supabase.from("kn_notifications").insert(rows).execute()
     }
@@ -1084,12 +1102,13 @@ struct ScheduleTemplate: Identifiable {
 
     func submitSwap(withEmployee: StaffMember, shift: Shift?) async {
         struct Insert: Encodable {
-            let fromEmployeeId, withEmployeeId, status: String
+            let fromEmployeeId, withEmployeeId, status, tenantId: String
             let fromShiftId: String?
             enum CodingKeys: String, CodingKey {
                 case fromEmployeeId = "from_employee_id"
                 case withEmployeeId = "with_employee_id"
                 case fromShiftId    = "from_shift_id"
+                case tenantId       = "tenant_id"
                 case status
             }
         }
@@ -1098,6 +1117,7 @@ struct ScheduleTemplate: Identifiable {
                 .insert(Insert(fromEmployeeId: currentUser.id.uuidString,
                                withEmployeeId: withEmployee.id.uuidString,
                                status: "pending",
+                               tenantId: Config.tenantId,
                                fromShiftId: shift?.id.uuidString))
                 .execute()
             if let fresh = try? await fetchSwaps() { swaps = fresh }
@@ -1386,17 +1406,18 @@ struct ScheduleTemplate: Identifiable {
         let df = DateFormatter(); df.dateFormat = "MMM d"
         let label = df.string(from: weekStart)
         struct NotifInsert: Encodable {
-            let employeeId, icon, title, body, category: String
+            let employeeId, icon, title, body, category, tenantId: String
             enum CodingKeys: String, CodingKey {
                 case employeeId = "employee_id"
                 case icon, title, body, category
+                case tenantId = "tenant_id"
             }
         }
         let inserts = staff.map {
             NotifInsert(employeeId: $0.id.uuidString, icon: "calendar",
                         title: "Schedule published",
                         body: "Your schedule for the week of \(label) is ready.",
-                        category: "schedule")
+                        category: "schedule", tenantId: Config.tenantId)
         }
         do {
             try await supabase.from("kn_notifications").insert(inserts).execute()
@@ -1412,35 +1433,40 @@ struct ScheduleTemplate: Identifiable {
 
     func sendMessage(threadId: UUID, text: String) async throws {
         struct Insert: Encodable {
-            let threadId, senderId, text: String
+            let threadId, senderId, text, tenantId: String
             enum CodingKeys: String, CodingKey {
                 case threadId = "thread_id"; case senderId = "sender_id"; case text
+                case tenantId = "tenant_id"
             }
         }
         try await supabase.from("kn_messages")
             .insert(Insert(threadId: threadId.uuidString,
-                           senderId: currentUser.id.uuidString, text: text))
+                           senderId: currentUser.id.uuidString, text: text,
+                           tenantId: Config.tenantId))
             .execute()
         if let fresh = try? await fetchThreads() { threads = fresh }
     }
 
     func createThread(withEmployeeId: UUID, initialMessage: String) async throws -> UUID {
         struct ThreadInsert: Encodable {
-            let isBroadcast: Bool
-            enum CodingKeys: String, CodingKey { case isBroadcast = "is_broadcast" }
+            let isBroadcast: Bool; let tenantId: String
+            enum CodingKeys: String, CodingKey {
+                case isBroadcast = "is_broadcast"; case tenantId = "tenant_id"
+            }
         }
         struct ParticipantInsert: Encodable {
-            let threadId, employeeId: String
+            let threadId, employeeId, tenantId: String
             enum CodingKeys: String, CodingKey {
                 case threadId = "thread_id"; case employeeId = "employee_id"
+                case tenantId = "tenant_id"
             }
         }
         let thread: DBThread = try await supabase.from("kn_message_threads")
-            .insert(ThreadInsert(isBroadcast: false))
+            .insert(ThreadInsert(isBroadcast: false, tenantId: Config.tenantId))
             .select().single().execute().value
         try await supabase.from("kn_thread_participants")
-            .insert([ParticipantInsert(threadId: thread.id.uuidString, employeeId: currentUser.id.uuidString),
-                     ParticipantInsert(threadId: thread.id.uuidString, employeeId: withEmployeeId.uuidString)])
+            .insert([ParticipantInsert(threadId: thread.id.uuidString, employeeId: currentUser.id.uuidString, tenantId: Config.tenantId),
+                     ParticipantInsert(threadId: thread.id.uuidString, employeeId: withEmployeeId.uuidString, tenantId: Config.tenantId)])
             .execute()
         try await sendMessage(threadId: thread.id, text: initialMessage)
         return thread.id
@@ -1448,24 +1474,26 @@ struct ScheduleTemplate: Identifiable {
 
     func createBroadcastThread(message: String) async throws {
         struct ThreadInsert: Encodable {
-            let isBroadcast: Bool; let broadcastRecipientCount: Int
+            let isBroadcast: Bool; let broadcastRecipientCount: Int; let tenantId: String
             enum CodingKeys: String, CodingKey {
                 case isBroadcast = "is_broadcast"
                 case broadcastRecipientCount = "broadcast_recipient_count"
+                case tenantId = "tenant_id"
             }
         }
         struct ParticipantInsert: Encodable {
-            let threadId, employeeId: String
+            let threadId, employeeId, tenantId: String
             enum CodingKeys: String, CodingKey {
                 case threadId = "thread_id"; case employeeId = "employee_id"
+                case tenantId = "tenant_id"
             }
         }
         let count = staff.count
         let thread: DBThread = try await supabase.from("kn_message_threads")
-            .insert(ThreadInsert(isBroadcast: true, broadcastRecipientCount: count))
+            .insert(ThreadInsert(isBroadcast: true, broadcastRecipientCount: count, tenantId: Config.tenantId))
             .select().single().execute().value
         let allParticipants = staff.map {
-            ParticipantInsert(threadId: thread.id.uuidString, employeeId: $0.id.uuidString)
+            ParticipantInsert(threadId: thread.id.uuidString, employeeId: $0.id.uuidString, tenantId: Config.tenantId)
         }
         if !allParticipants.isEmpty {
             try await supabase.from("kn_thread_participants").insert(allParticipants).execute()
