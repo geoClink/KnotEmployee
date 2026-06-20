@@ -112,6 +112,7 @@ struct ScheduleBuilderView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(row.name), \(days[dayIdx].0), \(cell ?? "off")")
+                        .accessibilityHint("Double tap to edit this shift")
                     }
                 }
                 .padding(.vertical, 5)

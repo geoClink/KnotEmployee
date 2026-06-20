@@ -80,6 +80,7 @@ struct TimeOffApprovalsView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Deny time off for \(request.staffName)")
+                .accessibilityHint("Rejects the request")
 
                 Button { approve(request) } label: {
                     HStack(spacing: 6) {
@@ -91,6 +92,7 @@ struct TimeOffApprovalsView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Approve time off for \(request.staffName)")
+                .accessibilityHint("Grants the time off")
             }
         }
         .knotCard(padding: 13)

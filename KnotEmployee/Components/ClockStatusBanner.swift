@@ -29,6 +29,8 @@ struct ClockStatusBanner: View {
                         .background(buttonColor, in: Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(buttonLabel)
+                .accessibilityHint(buttonHint)
             }
 
             if store.clockState == .clockedIn {
@@ -38,6 +40,8 @@ struct ClockStatusBanner: View {
                         .background(theme.paper.opacity(0.10), in: Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Take a break")
+                .accessibilityHint("Pauses your shift timer")
             }
         }
         .padding(16)
@@ -81,6 +85,13 @@ struct ClockStatusBanner: View {
         case .out: "Clock in"
         case .clockedIn: "Clock out"
         case .onBreak: "End break"
+        }
+    }
+    private var buttonHint: String {
+        switch store.clockState {
+        case .out: "Starts recording your work time"
+        case .clockedIn: "Stops recording your work time"
+        case .onBreak: "Resumes your shift timer"
         }
     }
     private var dotColor: Color {

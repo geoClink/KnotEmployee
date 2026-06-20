@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 extension Color {
     init(hex: UInt) {
@@ -7,5 +8,12 @@ extension Color {
             green: Double((hex >> 8)  & 0xFF) / 255,
             blue: Double(  hex        & 0xFF) / 255,
             opacity: 1)
+    }
+
+    init(light: UInt, dark: UInt) {
+        self = Color(UIColor { $0.userInterfaceStyle == .dark
+            ? UIColor(Color(hex: dark))
+            : UIColor(Color(hex: light))
+        })
     }
 }

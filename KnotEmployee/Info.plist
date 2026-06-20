@@ -13,9 +13,7 @@
 			</array>
 		</dict>
 	</array>
-	<key>UIUserInterfaceStyle</key>
-	<string>Light</string>
-	<key>UIAppFonts</key>
+<key>UIAppFonts</key>
 	<array>
 		<string>CormorantGaramond-Medium.ttf</string>
 		<string>DMSans_18pt-Regular.ttf</string>

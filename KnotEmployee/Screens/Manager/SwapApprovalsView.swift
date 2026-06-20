@@ -67,6 +67,7 @@ struct ApprovalsView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Deny pickup from \(shift.offeredBy)")
+                .accessibilityHint("Rejects the open shift pickup")
                 Button { approve(shift) } label: {
                     HStack(spacing: 6) {
                         IconView(icon: .check, size: 16, color: theme.paper)
@@ -77,6 +78,7 @@ struct ApprovalsView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Approve pickup from \(shift.offeredBy)")
+                .accessibilityHint("Assigns the shift to this employee")
             }
         }
         .knotCard(padding: 13)
@@ -111,6 +113,7 @@ struct ApprovalsView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Deny swap request from \(swap.fromName)")
+                .accessibilityHint("Rejects the swap")
                 Button { approveSwap(swap) } label: {
                     HStack(spacing: 6) {
                         IconView(icon: .check, size: 16, color: theme.paper)
@@ -121,6 +124,7 @@ struct ApprovalsView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Approve swap request from \(swap.fromName)")
+                .accessibilityHint("Confirms the shift swap between both employees")
             }
         }
         .knotCard(padding: 13)

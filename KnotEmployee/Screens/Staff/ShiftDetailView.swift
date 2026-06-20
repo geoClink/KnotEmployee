@@ -87,6 +87,7 @@ struct ShiftDetailView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Confirm shift")
+                .accessibilityHint("Marks you as confirmed for this shift")
             } else {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
@@ -115,6 +116,7 @@ struct ShiftDetailView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Give up shift")
+                .accessibilityHint("Posts this shift to the open shifts board for a teammate to pick up")
                 .confirmationDialog("Give up this shift?", isPresented: $showGiveUpConfirm, titleVisibility: .visible) {
                     Button("Give up shift", role: .destructive) { onGiveUp() }
                     Button("Cancel", role: .cancel) {}
